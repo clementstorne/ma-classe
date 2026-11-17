@@ -158,7 +158,7 @@ function RoomBg({ room }) {
       const { w, h } = await imageSize(url);
       await setPhoto('bg-' + room.id, url);
       mutate(dd => { dd.rooms.find(x => x.id === room.id).h = Math.round(ROOM_W * h / w); });
-      toast('Image de fond enregistrée. Dans le plan, « Modèle de la salle » → « Placer sur les chaises ».');
+      toast('Image de fond enregistrée.');
     } catch (err) { toast('Image illisible.'); }
   }
   async function del() {

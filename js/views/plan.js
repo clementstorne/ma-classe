@@ -1,7 +1,7 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
 import { useStore, mutate, classById, roomById, studentsOf, photoOf, roomsFor, roomH, getPlan, planKey, ROOM_W, ROOM_H, SEAT_W, SEAT_H } from '../store.js';
 import { Modal, Field, Avatar, Empty, toast } from './common.js';
-import { uid, displayName, initials, seatLabels } from '../util.js';
+import { uid, displayName, initials, seatLabels, shareOrDownload } from '../util.js';
 import { go } from '../router.js';
 
 /* ---------- Moteur de glisser-déposer (souris + tactile) ---------- */
@@ -144,20 +144,12 @@ export function PlanPage({ classId, roomId }) {
   const addSeat = () => edit((p, r) => { r.items.push({ id: uid(), kind: 'seat', x: 500, y: 300, w: SEAT_W, h: SEAT_H }); });
   const addLabel = () => { const t = prompt('Texte du repère (ex. Tableau, Bureau, Porte, Fenêtre)', 'Bureau'); if (t) edit((p, r) => r.items.push({ id: uid(), kind: 'label', x: 500, y: 20, w: 240, h: 44, text: t })); };
   const delSel = () => { if (!selSeat) return; edit((p, r) => { r.items = r.items.filter(i => i.id !== selSeat); delete p.seatMap[selSeat]; }); setSelSeat(null); };
-  async function seatsOnChairs() {
-    const n = room.items.filter(i => i.kind === 'seat').length;
-    if (n && !confirm(`Remplacer les ${n} places actuelles par une place sur chaque chaise du plan ? Les élèves déjà placés dans cette salle seront retirés des plans de toutes les classes.`)) return;
-    const pts = await detectChairs(photoOf('bg-' + roomId), ROOM_W, roomH(room));
-    if (!pts.length) return toast('Aucune chaise (orange) détectée sur l\'image.');
-    mutate(dd => {
-      const r = dd.rooms.find(x => x.id === roomId);
-      r.items = r.items.filter(i => i.kind !== 'seat' && !(i.kind === 'label' && /^tableau$/i.test(i.text)));
-      const cw = 82, ch = 88; // plus compactes que les places standard pour laisser voir les tables du fond
-      pts.forEach(([cx, cy]) => r.items.push({ id: uid(), kind: 'seat', x: Math.max(0, Math.min(ROOM_W - cw, Math.round(cx - cw / 2))), y: Math.max(0, Math.min(roomH(r) - ch, Math.round(cy - 12))), w: cw, h: ch }));
-      for (const k of Object.keys(dd.plans)) if (k.endsWith('|' + roomId)) dd.plans[k].seatMap = {};
-    });
-    setSelSeat(null);
-    toast(`${pts.length} places créées sur les chaises.`);
+  async function exportImage() {
+    try {
+      const blob = await renderPlanImage(room, plan.seatMap, byId, seatLabels(studs), `${cls.name} · ${room.name}`);
+      const r = await shareOrDownload(blob, `plan-${cls.name}-${room.name}.png`.replace(/[\\/:*?"<>|\s]+/g, '_'));
+      if (r === 'downloaded') toast('Image enregistrée (dossier Téléchargements).');
+    } catch (e) { toast('Export impossible.'); }
   }
   const dupSel = () => { if (!selSeat) return; edit((p, r) => { const i = r.items.find(x => x.id === selSeat); if (i) r.items.push({ ...i, id: uid(), x: Math.min(ROOM_W - i.w, i.x + 20), y: Math.min(roomH(r) - i.h, i.y + 20) }); }); };
   const editLabel = () => { const it = room.items.find(i => i.id === selSeat); if (!it || it.kind !== 'label') return; const t = prompt('Texte du repère', it.text); if (t) itemChange(it.id, { text: t }); };
@@ -171,12 +163,13 @@ export function PlanPage({ classId, roomId }) {
       <h1>Plan de classe</h1>
       <select class="inp" style="width:auto" value=${roomId} onChange=${e => go(`/plan/${classId}/${e.target.value}`)}>${[...roomsFor(d, cls), ...(roomsFor(d, cls).some(r => r.id === roomId) ? [] : [room])].map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
       <span class="grow"></span>
+      <button class="btn" onClick=${exportImage}>🖼 Exporter en image</button>
       <div class="seg"><button class=${mode === 'place' ? 'on P' : ''} onClick=${() => { setMode('place'); setSelSeat(null); }}>Placement</button>
         <button class=${mode === 'template' ? 'on P' : ''} onClick=${() => { setMode('template'); setSelSeat(null); setSelStu(null); }}>Modèle de la salle</button></div>
     </div>
     ${mode === 'template' ? html`<div class="row" style="margin-bottom:10px">
         <button class="btn small" onClick=${addSeat}>＋ Table</button><button class="btn small" onClick=${() => setGen(true)}>▦ Générer une grille</button>
-        <button class="btn small" onClick=${addLabel}>＋ Repère (tableau, bureau…)</button>${photoOf('bg-' + roomId) ? html`<button class="btn small" onClick=${seatsOnChairs}>🪑 Placer sur les chaises du fond</button>` : null}<span class="grow"></span>
+        <button class="btn small" onClick=${addLabel}>＋ Repère (tableau, bureau…)</button><span class="grow"></span>
         ${selItem ? html`${selItem.kind === 'label' ? html`<button class="btn small" onClick=${editLabel}>Renommer</button>` : null}
           <button class="btn small" onClick=${dupSel}>Dupliquer</button><button class="btn small danger" onClick=${delSel}>Supprimer</button>` : html`<span class="hint">Glisse les éléments pour les placer ; touche-en un pour le sélectionner.</span>`}
         <button class="btn small danger" onClick=${clearRoom}>Tout effacer</button></div>
@@ -214,27 +207,41 @@ function GridGen({ onClose, onGen }) {
     <p class="hint">Les tables sont ajoutées au modèle actuel ; utilise « Tout effacer » avant pour repartir de zéro.</p><//>`;
 }
 
-/** Repère les chaises (aplats orange du plan) et renvoie leurs centres en coordonnées de salle. */
-export async function detectChairs(url, W, H) {
-  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-  const w = W, h = Math.round(W * img.height / img.width);
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-  const px = ctx.getImageData(0, 0, w, h).data;
-  const hit = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
-    if (Math.abs(r - 204) + Math.abs(g - 141) + Math.abs(b - 89) < 40) hit[i] = 1;
-  }
-  const out = [];
-  for (let s = 0; s < w * h; s++) {
-    if (!hit[s]) continue;
-    let sx = 0, sy = 0, n = 0; const st = [s]; hit[s] = 0;
-    while (st.length) {
-      const p = st.pop(), x = p % w, y = (p - x) / w; sx += x; sy += y; n++;
-      for (const q of [p - 1, p + 1, p - w, p + w]) if (q >= 0 && q < w * h && hit[q] && Math.abs((q % w) - x) <= 1) { hit[q] = 0; st.push(q); }
+/* ---------- Export en image (PNG) : les places vides ne sont pas dessinées ---------- */
+const loadImg = url => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function fit(ctx, text, maxW) { let s = text; while (s.length > 1 && ctx.measureText(s).width > maxW) s = s.slice(0, -1); return s === text ? s : s + '…'; }
+export async function renderPlanImage(room, seatMap, byId, lab, title) {
+  const K = 2, RH = roomH(room), pad = 0;
+  const c = document.createElement('canvas'); c.width = ROOM_W * K; c.height = RH * K;
+  const ctx = c.getContext('2d'); ctx.scale(K, K);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ROOM_W, RH);
+  const bg = photoOf('bg-' + room.id);
+  if (bg) ctx.drawImage(await loadImg(bg), 0, 0, ROOM_W, RH);
+  for (const it of room.items) {
+    if (it.kind === 'label') {
+      rr(ctx, it.x, it.y, it.w, it.h, 10); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a8499'; ctx.stroke();
+      ctx.fillStyle = '#5b6578'; ctx.font = '700 20px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(fit(ctx, it.text.toUpperCase(), it.w - 12), it.x + it.w / 2, it.y + it.h / 2);
+      continue;
     }
-    if (n >= 150 && n <= 4000) out.push([sx / n, sy / n]);
+    const s = byId[seatMap[it.id]];
+    if (!s) continue; // place vide : rien
+    rr(ctx, it.x, it.y, it.w, it.h, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#cfd5e1'; ctx.stroke();
+    const px = it.x + 4, py = it.y + 4, pw = it.w - 8, ph = it.h - 8 - 22;
+    ctx.save(); rr(ctx, px, py, pw, ph, 8); ctx.clip();
+    const url = photoOf(s.id);
+    if (url) {
+      const im = await loadImg(url), k = Math.max(pw / im.width, ph / im.height), dw = im.width * k, dh = im.height * k;
+      ctx.drawImage(im, px + (pw - dw) / 2, py + Math.min(0, (ph - dh) * 0.2), dw, dh);
+    } else {
+      ctx.fillStyle = '#e8edff'; ctx.fillRect(px, py, pw, ph);
+      ctx.fillStyle = '#3b5bdb'; ctx.font = '800 26px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(initials(s).toUpperCase(), px + pw / 2, py + ph / 2);
+    }
+    ctx.restore();
+    ctx.fillStyle = '#1b2333'; ctx.font = '700 15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(fit(ctx, lab[s.id] || s.prenom, it.w - 8), it.x + it.w / 2, it.y + it.h - 15);
   }
-  return out.sort((a, b) => Math.round(a[1] / 40) - Math.round(b[1] / 40) || a[0] - b[0]);
+  return new Promise(res => c.toBlob(res, 'image/png'));
 }
