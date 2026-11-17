@@ -41,18 +41,7 @@ export function Settings() {
     </div>
 
     <h3 style="margin:18px 0 8px">Établissements et périodes</h3>
-    ${d.etabs.map(e => html`<div class="card col" style="margin-bottom:10px" key=${e.id}>
-      <div class="row"><${Field} label="Nom"><input value=${e.name} onInput=${v => setEtab(e.id, { name: v.target.value })} /><//>
-        <${Field} label="Découpage"><select value=${e.type} onChange=${v => { if (confirm('Remplacer les périodes par celles du nouveau découpage ?')) setEtab(e.id, { type: v.target.value, periods: defaultPeriods(v.target.value) }); }}>
-          <option value="trimestre">Trimestres</option><option value="semestre">Semestres</option></select><//></div>
-      <div class="row"><label class="row"><input type="checkbox" checked=${!!e.ab} onChange=${v => setEtab(e.id, { ab: v.target.checked, abRef: v.target.checked && !e.abRef ? iso(mondayOf(new Date())) : e.abRef })} /> Alternance de semaines A / B</label>
-        ${e.ab ? html`<span>La semaine en cours est une semaine</span><select class="inp" style="width:auto" value=${weekLetter(e, mondayOf(new Date())) || 'A'}
-          onChange=${v => { const m = mondayOf(new Date()); setEtab(e.id, { abRef: iso(v.target.value === 'A' ? m : addDays(m, -7)) }); }}><option value="A">A</option><option value="B">B</option></select>` : null}</div>
-      ${e.periods.map(p => html`<div class="row" key=${p.id}><input class="inp" style="width:150px" value=${p.name} onInput=${v => setPeriod(e.id, p.id, { name: v.target.value })} />
-        <input class="inp" style="width:auto" type="date" value=${p.start} onInput=${v => v.target.value && setPeriod(e.id, p.id, { start: v.target.value })} /> →
-        <input class="inp" style="width:auto" type="date" value=${p.end} onInput=${v => v.target.value && setPeriod(e.id, p.id, { end: v.target.value })} /></div>`)}
-    </div>`)}
-    <p class="hint">Les dates par défaut sont des repères : ajuste-les au calendrier de chaque établissement. Le suivi (oublis, devoirs, absences) se calcule sur ces périodes.</p>
+    <a class="card row" href="#/etabs" style="text-decoration:none;color:inherit">${d.etabs.map(e => html`<span class="chip">${e.name} · ${e.type}s</span>`)}<span class="grow"></span><b>Gérer les établissements ›</b></a>
 
     <h3 style="margin:18px 0 8px">Salles</h3>
     <div class="list">${d.rooms.map(r => html`<div class="item" key=${r.id} style="cursor:default"><input class="inp" style="flex:1" value=${r.name} onInput=${v => mutate(dd => { dd.rooms.find(x => x.id === r.id).name = v.target.value; })} />

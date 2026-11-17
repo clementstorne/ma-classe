@@ -59,8 +59,8 @@ export function defaultData() {
     v: 1, createdAt: Date.now(), updatedAt: Date.now(), lastBackup: 0,
     settings: { threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
     etabs: [
-      { id: 'e1', name: 'Établissement 1', type: 'trimestre', periods: defaultPeriods('trimestre') },
-      { id: 'e2', name: 'Établissement 2', type: 'semestre', periods: defaultPeriods('semestre') }],
+      { id: 'e1', name: 'Collège Victor Schoelcher', type: 'semestre', periods: defaultPeriods('semestre') },
+      { id: 'e2', name: 'Collège Le Segrais', type: 'trimestre', periods: defaultPeriods('trimestre') }],
     classes: [], students: [],
     rooms: [{ id: 'r1', name: 'Salle 1', items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', items: defaultRoomSeats() }],
     plans: {}, slots: [], sessions: {}, events: [], evals: [],
