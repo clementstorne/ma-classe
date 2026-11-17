@@ -47,11 +47,27 @@ export function PeriodSelect({ etab, value, onChange }) {
     <option value="all">Toute l'année</option></select>`;
 }
 
-/** Sélecteur de couleur : pastilles de la palette + couleur libre. */
+/** Normalise « #3558e6 », « 3558E6 » ou « #35e » en « #3558e6 » ; null si invalide. */
+export function normHex(s) {
+  let v = String(s || '').trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(v)) v = v.split('').map(c => c + c).join('');
+  return /^[0-9a-fA-F]{6}$/.test(v) ? '#' + v.toLowerCase() : null;
+}
+
+/** Sélecteur de couleur : pastilles de la palette + saisie d'un code HEX. */
 export function ColorPicker({ value, onChange }) {
-  const custom = !CLASS_COLORS.includes(value);
-  return html`<div class="swatches" role="radiogroup" aria-label="Couleur">
-    ${CLASS_COLORS.map(c => html`<button type="button" role="radio" aria-checked=${value === c} class=${'swatch' + (value === c ? ' on' : '')} style=${{ background: c }} aria-label=${c} onClick=${() => onChange(c)}></button>`)}
-    <label class=${'swatch custom' + (custom ? ' on' : '')} style=${custom ? { background: value } : null} title="Autre couleur…">
-      <input type="color" value=${value} onInput=${e => onChange(e.target.value)} /><span>${custom ? '' : '＋'}</span></label></div>`;
+  const [draft, setDraft] = useState(null);       // texte en cours de saisie (null = suit la valeur)
+  const shown = draft !== null ? draft : value;
+  const ok = normHex(shown) !== null;
+  return html`<div class="col" style="gap:10px">
+    <div class="swatches" role="radiogroup" aria-label="Couleur">
+      ${CLASS_COLORS.map(c => html`<button type="button" role="radio" aria-checked=${value === c} class=${'swatch' + (value === c ? ' on' : '')} style=${{ background: c }} aria-label=${c} onClick=${() => { setDraft(null); onChange(c); }}></button>`)}
+    </div>
+    <div class="row">
+      <span class="swatch on" style=${{ background: value, cursor: 'default' }} aria-hidden="true"></span>
+      <label class="field" style="flex-direction:row;align-items:center;gap:8px"><span>Code HEX</span>
+        <input class=${'inp' + (ok ? '' : ' bad')} style="width:130px;font-family:ui-monospace,Menlo,monospace" placeholder="#3558e6" maxlength="7" autocapitalize="off" autocomplete="off" spellcheck="false"
+          value=${shown} onInput=${e => { const v = e.target.value; setDraft(v); const h = normHex(v); if (h) onChange(h); }} onBlur=${() => setDraft(null)} /></label>
+      ${ok ? null : html`<span class="small" style="color:var(--ko)">Code invalide (ex. #3558e6)</span>`}
+    </div></div>`;
 }
