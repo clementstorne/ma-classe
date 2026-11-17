@@ -2,11 +2,12 @@ import { html, useState, useEffect, useRef } from '../../vendor/preact-htm.js';
 import { useStore, mutate, classById, studentsOf, groupsOf, etabOf } from '../store.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { studentStats, questionAverage, evalAverage } from '../logic.js';
-import { fmtNum, parseScore, uid, displayName } from '../util.js';
+import { fmtNum, parseScore, uid, displayName, seatLabels } from '../util.js';
 import { go } from '../router.js';
 
 const f1 = n => (n == null ? '' : (Math.round(n * 10) / 10).toString().replace('.', ','));
 
+const FIRST_W = 150, COL_W = 60;
 export function Eval({ id, q }) {
   const d = useStore();
   const ev = d.evals.find(e => e.id === id);
@@ -23,7 +24,9 @@ export function Eval({ id, q }) {
 
   if (!ev || !cls) return html`<${Empty} title="Évaluation introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
   const groups = groupsOf(cls);
-  const studs = studentsOf(d, ev.classId).filter(s => !grp || s.group === grp);
+  const classStuds = studentsOf(d, ev.classId);
+  const lab = seatLabels(classStuds);
+  const studs = classStuds.filter(s => !grp || s.group === grp);
   const comps = d.settings.comps;
   const usedComps = comps.filter(c => ev.exercises.some(x => x.questions.some(qq => (qq.comps || []).includes(c))));
   const stats = Object.fromEntries(studs.map(s => [s.id, studentStats(ev, s.id, comps)]));
@@ -128,15 +131,16 @@ export function Eval({ id, q }) {
       <button class="btn small" onClick=${() => setStruct(true)}>✎ Barème et compétences</button>
       <button class="btn small" onClick=${() => setMeta(true)}>⚙</button></div>
     <p class="hint">Touche une case, puis une valeur rapide ou saisis les points (<b>x</b> = question non évaluée, exclue du barème ; <b>–</b> = non traité). Les cases vides sont en jaune. La colonne ± permet un bonus ou un malus sur la note (ex. −1).</p>
-    <div class="gridwrap"><table class="g">
+    <div class="gridwrap"><table class="g" style=${{ width: (FIRST_W + (transposed ? studs.length + 1 : items.length) * COL_W) + 'px' }}>
+      <colgroup><col style=${{ width: FIRST_W + 'px' }} />${Array.from({ length: transposed ? studs.length + 1 : items.length }, () => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       ${!transposed ? html`
         <thead><tr><th class="stk" rowspan="2">Élève</th>
           ${ev.exercises.map(ex => html`<th colspan=${exSpan(ex)}>${ex.title}</th>`)}<th colspan="3">Note</th>${usedComps.length ? html`<th colspan=${usedComps.length}>Compétences</th>` : null}</tr>
           <tr>${items.map(it => html`<th class=${it.kind === 'q' ? '' : 'tot'}>${head(it)}</th>`)}</tr></thead>
-        <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${displayName(s)}</th>${items.map(it => cell(s, it))}</tr>`)}</tbody>
+        <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th>${items.map(it => cell(s, it))}</tr>`)}</tbody>
         <tfoot><tr><th class="stk">Moyenne / réussite</th>${items.map(it => html`<td>${foot(it)}</td>`)}</tr></tfoot>`
       : html`
-        <thead><tr><th class="stk"></th>${studs.map(s => html`<th style="min-width:78px;height:54px;padding:2px 4px"><b style="font-size:12px">${s.nom}</b><br /><span style="font-weight:500">${s.prenom}</span></th>`)}<th class="tot">Moy.</th></tr></thead>
+        <thead><tr><th class="stk"></th>${studs.map(s => html`<th style="height:42px;padding:2px 4px;overflow:hidden;text-overflow:ellipsis">${lab[s.id]}</th>`)}<th class="tot">Moy.</th></tr></thead>
         <tbody>${items.map((it, i) => {
           const first = it.kind === 'q' && (i === 0 || items[i - 1].kind === 'tot');
           return html`${first ? html`<tr><th class="stk" colspan=${studs.length + 2} style="background:var(--accent-soft);color:var(--accent)">${it.ex.title}</th></tr>` : null}
