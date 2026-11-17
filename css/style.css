@@ -89,7 +89,7 @@ textarea.inp,.field textarea{min-height:70px}
 .week .now{position:absolute;left:0;right:0;border-top:2px solid var(--ko);z-index:2;pointer-events:none}
 .slot{position:absolute;left:3px;right:3px;border-radius:9px;padding:5px 8px;color:#fff;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;gap:1px;box-shadow:0 1px 3px rgba(0,0,0,.2);border:0;text-align:left;font-size:13px}
 .slot b{font-size:15px}
-.slot .tag{position:absolute;top:4px;right:6px;font-size:12px;background:rgba(255,255,255,.25);padding:0 6px;border-radius:99px}
+.slot .tag{position:absolute;bottom:4px;right:6px;font-size:12px;background:rgba(255,255,255,.25);padding:0 6px;border-radius:99px}
 .week.edit .dc{cursor:copy}
 
 /* élèves & suivi */
@@ -233,3 +233,6 @@ table.bilan thead .stk{z-index:3;background:var(--soft)}
 .cellin.bad{background:var(--ko-soft)}
 
 table.g td.q.absent{background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(120,130,150,.18) 6px 12px)}
+
+.slot .wk{position:absolute;top:4px;right:5px;width:19px;height:19px;border-radius:5px;background:rgba(255,255,255,.95);color:#1b2333;font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.slot.cancelled .wk{background:var(--card)}

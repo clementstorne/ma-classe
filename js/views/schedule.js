@@ -162,7 +162,8 @@ export function Schedule() {
           const note = o.cancelled ? 'annulée' : o.oneOff ? 'ponctuelle' : o.modified ? 'modifiée' : '';
           return html`<button class=${'slot' + (o.cancelled ? ' cancelled' : '')} key=${o.id} style=${{ background: bg, color: textOn(bg), top: (toMin(o.start) - gStart) * PPM + 'px', height: (toMin(o.end) - toMin(o.start)) * PPM - 2 + 'px' }}
             onClick=${e => { e.stopPropagation(); openOcc(o); }}>
-            <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${o.week && !o.oneOff ? html` <small style="opacity:.85">· sem. ${o.week}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
+            <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
+            ${o.week && !o.oneOff ? html`<i class="wk" title=${'Semaine ' + o.week}>${o.week}</i>` : null}
             <span>${o.start}–${o.end}${room ? ' · ' + room.name : ''}</span>
             ${se && se.validated && !o.cancelled ? html`<span class="tag">✓ appel${nAbs ? ' · ' + nAbs + ' abs.' : ''}</span>` : null}
           </button>`;
