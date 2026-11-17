@@ -163,7 +163,7 @@ export function PlanPage({ classId, roomId }) {
       <h1>Plan de classe</h1>
       <select class="inp" style="width:auto" value=${roomId} onChange=${e => go(`/plan/${classId}/${e.target.value}`)}>${[...roomsFor(d, cls), ...(roomsFor(d, cls).some(r => r.id === roomId) ? [] : [room])].map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
       <span class="grow"></span>
-      <button class="btn" onClick=${exportImage}>🖼 Exporter en image</button>
+      <button class="btn" onClick=${exportImage}>Exporter</button>
       <div class="seg"><button class=${mode === 'place' ? 'on P' : ''} onClick=${() => { setMode('place'); setSelSeat(null); }}>Placement</button>
         <button class=${mode === 'template' ? 'on P' : ''} onClick=${() => { setMode('template'); setSelSeat(null); setSelStu(null); }}>Modèle de la salle</button></div>
     </div>
