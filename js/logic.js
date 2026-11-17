@@ -3,7 +3,8 @@
 export const questionsOf = ev => ev.exercises.flatMap(ex => ex.questions.map(q => ({ ...q, exId: ex.id })));
 
 /** Statistiques d'un élève pour une évaluation. 'x' = question non évaluée (exclue du barème). */
-export function studentStats(ev, sid, comps) {
+/** `student` (facultatif) : un élève avec aménagement voit sa note sur 20 arrondie au quart de point. */
+export function studentStats(ev, sid, comps, student) {
   const sc = ev.scores[sid] || {};
   let total = 0, max = 0, entered = 0;
   const perEx = {};
@@ -33,11 +34,14 @@ export function studentStats(ev, sid, comps) {
   // ajustement manuel (bonus / malus), ex. -1 point ; un élève sans aucune saisie n'a pas de note
   const adj = (ev.adjust && ev.adjust[sid]) || 0;
   const final = Math.max(0, total + adj);
-  return { total, adj, final, max, note20: entered > 0 && max > 0 ? final / max * 20 : null, entered, perEx, levels };
+  const absent = !!(ev.absent && ev.absent[sid]);
+  let note20 = !absent && entered > 0 && max > 0 ? final / max * 20 : null;
+  if (note20 != null && student && String(student.amenagement || '').trim()) note20 = Math.round(note20 * 4) / 4;
+  return { total, adj, final, max, note20, absent, entered, perEx, levels };
 }
 
-export function evalAverage(ev, studentIds, comps) {
-  const notes = studentIds.map(id => studentStats(ev, id, comps).note20).filter(n => n != null);
+export function evalAverage(ev, studentIds, comps, byId = {}) {
+  const notes = studentIds.map(id => studentStats(ev, id, comps, byId[id]).note20).filter(n => n != null);
   return notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null;
 }
 

@@ -148,7 +148,7 @@ function NotesList({ cls, studs, onImport }) {
     <button class="btn" onClick=${onImport}>⬆ Importer depuis Excel</button></div>
     ${!evs.length ? html`<${Empty} title="Aucune évaluation"><p>Crée une évaluation et saisis le détail des points question par question.</p><//>`
     : html`<div class="list">${evs.map(ev => {
-        const avg = evalAverage(ev, studs.map(s => s.id), d.settings.comps);
+        const avg = evalAverage(ev, studs.map(s => s.id), d.settings.comps, Object.fromEntries(studs.map(s => [s.id, s])));
         const per = (etab.periods || []).find(p => ev.date >= p.start && ev.date <= p.end);
         return html`<div class="item" key=${ev.id} onClick=${() => go('/eval/' + ev.id)}><div class="grow"><b>${ev.name}</b>
           <div class="muted small">${fmtDateShort(ev.date)}${per ? ' · ' + per.name : ''} · ${ev.exercises.reduce((n, x) => n + x.questions.length, 0)} questions</div></div>

@@ -27,10 +27,11 @@ export function Eval({ id, q }) {
   const groups = groupsOf(cls);
   const classStuds = studentsOf(d, ev.classId);
   const lab = seatLabels(classStuds);
+  const sById = Object.fromEntries(classStuds.map(s => [s.id, s]));
   const studs = classStuds.filter(s => !grp || s.group === grp);
   const comps = d.settings.comps;
   const usedComps = comps.filter(c => ev.exercises.some(x => x.questions.some(qq => (qq.comps || []).includes(c))));
-  const stats = Object.fromEntries(studs.map(s => [s.id, studentStats(ev, s.id, comps)]));
+  const stats = Object.fromEntries(studs.map(s => [s.id, studentStats(ev, s.id, comps, s)]));
   const ids = studs.map(s => s.id);
   const allQ = ev.exercises.flatMap(x => x.questions);
   const maxTotal = ev.exercises.reduce((n, x) => n + x.questions.reduce((m, qq) => m + qq.max, 0), 0);
@@ -42,7 +43,7 @@ export function Eval({ id, q }) {
 
   const setScore = (sid, qid, v) => mutate(dd => {
     const e = dd.evals.find(x => x.id === id); const sc = e.scores[sid] ||= {};
-    if (v === null) delete sc[qid]; else sc[qid] = v;
+    if (v === null) delete sc[qid]; else { sc[qid] = v; if (typeof v === 'number' && e.absent) delete e.absent[sid]; }
   });
   const sIndex = sid => ids.indexOf(sid), qIndex = qid => allQ.findIndex(x => x.id === qid);
   function move(dir) {            // dir: 'next' | 'down' | 'up' | 'left' | 'right'
@@ -60,6 +61,10 @@ export function Eval({ id, q }) {
     }
     setSel({ sid: ids[si], qid: allQ[qi].id });
   }
+  function toggleAbsent() {
+    if (!sel) return;
+    mutate(dd => { const e = dd.evals.find(x => x.id === id); e.absent ||= {}; if (e.absent[sel.sid]) delete e.absent[sel.sid]; else e.absent[sel.sid] = true; });
+  }
   function commit(v, advance = true) {
     if (!sel) return;
     const qq = allQ.find(x => x.id === sel.qid);
@@ -71,6 +76,7 @@ export function Eval({ id, q }) {
     if (e.key === 'Enter') { const v = parseScore(e.target.value); if (v === undefined) { setBad(true); return; } commit(v === null ? null : v); e.target.value = ''; }
     else if (e.key === 'Escape') setSel(null);
     else if (e.target.value === '' && ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); move({ ArrowDown: 'down', ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right' }[e.key]); }
+    else if (e.target.value === '' && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); toggleAbsent(); }
     else if (e.target.value === '' && (e.key === 'x' || e.key === 'X')) { e.preventDefault(); commit('x'); }
     else if (e.target.value === '' && e.key === '-') { e.preventDefault(); commit('-'); }
     else if (e.key === 'Delete' || (e.key === 'Backspace' && e.target.value === '')) { e.preventDefault(); commit(null, false); }
@@ -89,7 +95,7 @@ export function Eval({ id, q }) {
     const v = (ev.scores[s.id] || {})[item.q.id];
     const on = sel && sel.sid === s.id && sel.qid === item.q.id;
     let c = 'q';
-    if (v === 'x') c += ' x'; else if (v === '-') c += ' dash'; else if (v === undefined) c += ' blank';
+    if (v === 'x') c += ' x'; else if (v === '-') c += ' dash'; else if (v === undefined) c += stats[s.id].absent ? ' absent' : ' blank';
     else if (v === item.q.max && v > 0) c += ' full'; else if (v === 0) c += ' zero';
     if (on) c += ' sel';
     return html`<td key=${item.q.id} class=${c} onClick=${() => setSel({ sid: s.id, qid: item.q.id })}>${v === undefined ? '' : v === 'x' ? 'x' : v === '-' ? '–' : fmtNum(v)}</td>`;
@@ -99,8 +105,8 @@ export function Eval({ id, q }) {
     if (item.kind === 'q') return qcell(s, item);
     if (item.kind === 'tot') { const t = st.perEx[item.ex.id]; return html`<td class="tot">${st.entered ? fmtNum(t.total) : ''}</td>`; }
     if (item.kind === 'adj') return html`<td class="q" title="Bonus / malus" onClick=${() => askAdjust(s)}>${st.adj ? (st.adj > 0 ? '+' : '') + fmtNum(st.adj) : ''}</td>`;
-    if (item.kind === 'note') return html`<td class="tot">${st.entered ? fmtNum(st.final) + '/' + fmtNum(st.max) : ''}</td>`;
-    if (item.kind === 'n20') return html`<td class="tot">${st.note20 == null ? '' : f1(st.note20)}</td>`;
+    if (item.kind === 'note') return html`<td class="tot">${st.absent ? 'Abs' : st.entered ? fmtNum(st.final) + '/' + fmtNum(st.max) : ''}</td>`;
+    if (item.kind === 'n20') return html`<td class="tot">${st.absent ? 'Abs' : st.note20 == null ? '' : f1(st.note20)}</td>`;
     const lv = st.levels[item.c];
     return html`<td class=${'lvl ' + (lv ? 'lv' + lv : '')}>${lv || ''}</td>`;
   };
@@ -110,13 +116,13 @@ export function Eval({ id, q }) {
     if (item.kind === 'q') { const a = questionAverage(ev, item.q, ids); return a ? Math.round(a.pct) + '%' : ''; }
     if (item.kind === 'tot') { const v = studs.map(s => stats[s.id]).filter(x => x.entered).map(x => x.perEx[item.ex.id].total); return v.length ? fmtNum(v.reduce((a, b) => a + b, 0) / v.length) : ''; }
     if (item.kind === 'adj') return '';
-    if (item.kind === 'n20') { const a = evalAverage(ev, ids, comps); return a == null ? '' : f1(a); }
+    if (item.kind === 'n20') { const a = evalAverage(ev, ids, comps, sById); return a == null ? '' : f1(a); }
     if (item.kind === 'note') { const v = studs.map(s => stats[s.id]).filter(x => x.entered).map(x => x.final); return v.length ? fmtNum(v.reduce((a, b) => a + b, 0) / v.length) : ''; }
     const lv = studs.map(s => stats[s.id].levels[item.c]).filter(Boolean);
     return lv.length ? f1(lv.reduce((a, b) => a + b, 0) / lv.length) : '';
   };
 
-  const avg = evalAverage(ev, ids, comps);
+  const avg = evalAverage(ev, ids, comps, sById);
   const nGraded = studs.filter(s => stats[s.id].note20 != null).length;
   const exSpan = ex => ex.questions.length + 1;
   const selS = sel && d.students.find(s => s.id === sel.sid), selQ = sel && allQ.find(x => x.id === sel.qid);
@@ -153,7 +159,7 @@ export function Eval({ id, q }) {
     ${sel && selS && selQ ? html`<div class="entry">
       <div class="who"><b>${displayName(selS)}</b><div class="muted small">${selQ.label} · sur ${fmtNum(selQ.max)}${(selQ.comps || []).length ? ' · ' + selQ.comps.join(', ') : ''}</div></div>
       <div class="qk">${quick.map(v => html`<button class=${v === selQ.max ? 'pri' : ''} onClick=${() => commit(v)}>${fmtNum(v)}</button>`)}
-        <button onClick=${() => commit('x')} title="Non évalué">x</button><button onClick=${() => commit('-')} title="Non traité">–</button><button onClick=${() => commit(null, false)} title="Effacer">⌫</button></div>
+        <button class=${stats[sel.sid] && stats[sel.sid].absent ? 'pri' : ''} onClick=${toggleAbsent} title="Élève absent à cette évaluation">Abs</button><button onClick=${() => commit('x')} title="Non évalué">x</button><button onClick=${() => commit('-')} title="Non traité">–</button><button onClick=${() => commit(null, false)} title="Effacer">⌫</button></div>
       <input ref=${inp} class=${bad ? 'bad' : ''} inputmode="decimal" placeholder="points" onKeyDown=${onKey} aria-label="Points" />
       <button class="btn" onClick=${() => move('next')}>Suivant ›</button><button class="btn ghost" onClick=${() => setSel(null)}>✕</button></div>` : null}
     ${bilan ? html`<${Bilan} ev=${ev} studs=${studs} lab=${lab} stats=${stats} comps=${usedComps} onClose=${() => setBilan(false)} />` : null}
