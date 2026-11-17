@@ -1,6 +1,6 @@
 import { html, useState } from '../../vendor/preact-htm.js';
 import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter } from '../store.js';
-import { mondayOf, addDays, iso, toMin, fromMin, DAYS, uid, CLASS_COLORS, todayISO } from '../util.js';
+import { mondayOf, addDays, iso, toMin, fromMin, DAYS, uid, classColor, textOn, todayISO } from '../util.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { go } from '../router.js';
 
@@ -30,7 +30,7 @@ export function Schedule() {
 
   const colorOf = cid => {
     const c = classById(d, cid);
-    return c ? CLASS_COLORS[(c.color || 0) % CLASS_COLORS.length] : '#888';
+    return c ? classColor(c) : '#888';
   };
 
   function clickColumn(e, day) {
@@ -99,7 +99,7 @@ export function Schedule() {
             const c = classById(d, s.classId);
             const room = roomById(d, s.roomId);
             const nAbs = se ? Object.values(se.marks).filter(m => m === 'A').length : 0;
-            return html`<button class="slot" key=${s.id} style=${{ background: colorOf(s.classId), top: (toMin(s.start) - gStart) * PPM + 'px', height: (toMin(s.end) - toMin(s.start)) * PPM - 2 + 'px' }}
+            return html`<button class="slot" key=${s.id} style=${{ background: colorOf(s.classId), color: textOn(colorOf(s.classId)), top: (toMin(s.start) - gStart) * PPM + 'px', height: (toMin(s.end) - toMin(s.start)) * PPM - 2 + 'px' }}
               onClick=${e => { e.stopPropagation(); openSlot(s, date); }}>
               <b>${c ? c.name : '?'}${s.week ? html` <small style="opacity:.85">· sem. ${s.week}</small>` : ''}</b><span>${s.start}–${s.end}${room ? ' · ' + room.name : ''}</span>
               ${se && se.validated ? html`<span class="tag">✓ appel${nAbs ? ' · ' + nAbs + ' abs.' : ''}</span>` : null}

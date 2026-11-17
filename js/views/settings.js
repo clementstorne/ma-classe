@@ -71,7 +71,7 @@ export function loadDemo() {
   const pre = ['Léa', 'Hugo', 'Emma', 'Lucas', 'Chloé', 'Louis', 'Jade', 'Nathan', 'Inès', 'Gabriel', 'Lina', 'Tom', 'Zoé', 'Adam', 'Manon', 'Noah', 'Camille', 'Ethan', 'Sarah', 'Léo', 'Alice', 'Maël', 'Eva', 'Jules'];
   mutate(d => {
     const cid = uid();
-    d.classes.push({ id: cid, name: 'Exemple 4A', etabId: d.etabs[0].id, color: d.classes.length % 8 });
+    d.classes.push({ id: cid, name: 'Exemple 4A', etabId: d.etabs[0].id, color: '#d9822b' });
     const sts = noms.map((n, i) => ({ id: uid(), classId: cid, nom: n, prenom: pre[i], amenagement: i === 3 ? 'Dys : énoncés agrandis, tiers-temps' : i === 9 ? 'Place devant, rappel des consignes' : '', hasPhoto: false }));
     d.students.push(...sts);
     const mon = mondayOf(new Date());

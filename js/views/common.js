@@ -1,6 +1,6 @@
 import { html, useState, useEffect } from '../../vendor/preact-htm.js';
 import { photoOf } from '../store.js';
-import { initials } from '../util.js';
+import { initials, CLASS_COLORS } from '../util.js';
 
 export function Avatar({ s, size = 40 }) {
   const p = s && photoOf(s.id);
@@ -45,4 +45,13 @@ export function PeriodSelect({ etab, value, onChange }) {
   return html`<select class="inp" style="width:auto" value=${value} onChange=${e => onChange(e.target.value)}>
     ${(etab.periods || []).map(p => html`<option value=${p.id}>${p.name}</option>`)}
     <option value="all">Toute l'année</option></select>`;
+}
+
+/** Sélecteur de couleur : pastilles de la palette + couleur libre. */
+export function ColorPicker({ value, onChange }) {
+  const custom = !CLASS_COLORS.includes(value);
+  return html`<div class="swatches" role="radiogroup" aria-label="Couleur">
+    ${CLASS_COLORS.map(c => html`<button type="button" role="radio" aria-checked=${value === c} class=${'swatch' + (value === c ? ' on' : '')} style=${{ background: c }} aria-label=${c} onClick=${() => onChange(c)}></button>`)}
+    <label class=${'swatch custom' + (custom ? ' on' : '')} style=${custom ? { background: value } : null} title="Autre couleur…">
+      <input type="color" value=${value} onInput=${e => onChange(e.target.value)} /><span>${custom ? '' : '＋'}</span></label></div>`;
 }

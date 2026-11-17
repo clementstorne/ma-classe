@@ -1,9 +1,9 @@
 import { html, useState } from '../../vendor/preact-htm.js';
 import { useStore, mutate, classById, studentsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById } from '../store.js';
-import { Modal, Field, Avatar, Empty, PeriodSelect, toast } from './common.js';
+import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
-import { uid, CLASS_COLORS, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum } from '../util.js';
+import { uid, CLASS_COLORS, classColor, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum } from '../util.js';
 import { suiviStats, evalAverage } from '../logic.js';
 import { go } from '../router.js';
 
@@ -13,28 +13,29 @@ export function ClassList() {
   function save() {
     if (!form.name.trim()) return;
     mutate(dd => {
-      if (form.id) Object.assign(dd.classes.find(c => c.id === form.id), { name: form.name.trim(), etabId: form.etabId });
-      else dd.classes.push({ id: uid(), name: form.name.trim(), etabId: form.etabId, color: dd.classes.length % CLASS_COLORS.length });
+      if (form.id) Object.assign(dd.classes.find(c => c.id === form.id), { name: form.name.trim(), etabId: form.etabId, color: form.color });
+      else dd.classes.push({ id: uid(), name: form.name.trim(), etabId: form.etabId, color: form.color });
     });
     setForm(null);
   }
   return html`<div class="page">
     <div class="page-head"><h1>Classes</h1><span class="grow"></span>
-      <button class="btn primary" onClick=${() => setForm({ name: '', etabId: d.etabs[0].id })}>＋ Nouvelle classe</button></div>
+      <button class="btn primary" onClick=${() => setForm({ name: '', etabId: d.etabs[0].id, color: CLASS_COLORS[d.classes.length % CLASS_COLORS.length] })}>＋ Nouvelle classe</button></div>
     ${!d.classes.length ? html`<${Empty} title="Aucune classe">
       <p>Crée une classe puis importe ses élèves (CSV / Excel / copier-coller).</p><//>` : null}
     ${d.etabs.map(e => {
       const cs = d.classes.filter(c => c.etabId === e.id);
       if (!cs.length) return null;
       return html`<h3 style="margin:16px 0 8px">${e.name}</h3><div class="cards">${cs.map(c => html`
-        <a class="card class-card" href=${'#/class/' + c.id + '/eleves'} style=${{ '--c': CLASS_COLORS[c.color % CLASS_COLORS.length] }}>
+        <a class="card class-card" href=${'#/class/' + c.id + '/eleves'} style=${{ '--c': classColor(c) }}>
           <b>${c.name}</b><span class="muted">${d.students.filter(s => s.classId === c.id).length} élèves</span></a>`)}</div>`;
     })}
     ${form ? html`<${Modal} title=${form.id ? 'Modifier la classe' : 'Nouvelle classe'} onClose=${() => setForm(null)}
       foot=${html`<button class="btn" onClick=${() => setForm(null)}>Annuler</button><button class="btn primary" onClick=${save}>Enregistrer</button>`}>
       <${Field} label="Nom de la classe"><input value=${form.name} placeholder="ex. 4C" onInput=${e => setForm({ ...form, name: e.target.value })} /><//>
       <${Field} label="Établissement"><select value=${form.etabId} onChange=${e => setForm({ ...form, etabId: e.target.value })}>
-        ${d.etabs.map(e => html`<option value=${e.id}>${e.name} (${e.type}s)</option>`)}</select><//><//>` : null}
+        ${d.etabs.map(e => html`<option value=${e.id}>${e.name} (${e.type}s)</option>`)}</select><//>
+      <${Field} label="Couleur"><${ColorPicker} value=${form.color} onChange=${c => setForm({ ...form, color: c })} /><//><//>` : null}
   </div>`;
 }
 
@@ -61,7 +62,7 @@ export function ClassFolder({ id, tab, q }) {
       for (const k of Object.keys(dd.sessions)) if (dd.sessions[k].classId === id) delete dd.sessions[k];
       for (const k of Object.keys(dd.plans)) if (k.startsWith(id + '|')) delete dd.plans[k];
     }); setEdit(null); go('/classes'); return; }
-    mutate(dd => Object.assign(dd.classes.find(c => c.id === id), { name: edit.name.trim() || cls.name, etabId: edit.etabId }));
+    mutate(dd => Object.assign(dd.classes.find(c => c.id === id), { name: edit.name.trim() || cls.name, etabId: edit.etabId, color: edit.color }));
     setEdit(null);
   }
   function newStudent() {
@@ -71,9 +72,9 @@ export function ClassFolder({ id, tab, q }) {
   }
 
   return html`<div class="page">
-    <div class="page-head"><a class="btn ghost" href="#/classes">‹ Classes</a><h1>${cls.name}</h1>
+    <div class="page-head"><a class="btn ghost" href="#/classes">‹ Classes</a><span class="dot" style=${{ background: classColor(cls) }}></span><h1>${cls.name}</h1>
       <span class="sub">${studs.length} élèves · ${etabOf(d, cls).name}</span><span class="grow"></span>
-      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId })}>⚙ Classe</button></div>
+      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>⚙ Classe</button></div>
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
         <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel'}</button>
@@ -99,7 +100,8 @@ export function ClassFolder({ id, tab, q }) {
     ${edit ? html`<${Modal} title="Paramètres de la classe" onClose=${() => setEdit(null)}
       foot=${html`<button class="btn danger" onClick=${() => { edit.del = true; saveClass(); }}>Supprimer la classe</button><span class="grow"></span><button class="btn primary" onClick=${saveClass}>Enregistrer</button>`}>
       <${Field} label="Nom"><input value=${edit.name} onInput=${e => setEdit({ ...edit, name: e.target.value })} /><//>
-      <${Field} label="Établissement"><select value=${edit.etabId} onChange=${e => setEdit({ ...edit, etabId: e.target.value })}>${d.etabs.map(e => html`<option value=${e.id}>${e.name}</option>`)}</select><//><//>` : null}
+      <${Field} label="Établissement"><select value=${edit.etabId} onChange=${e => setEdit({ ...edit, etabId: e.target.value })}>${d.etabs.map(e => html`<option value=${e.id}>${e.name}</option>`)}</select><//>
+      <${Field} label="Couleur de la classe"><${ColorPicker} value=${edit.color} onChange=${c => setEdit({ ...edit, color: c })} /><//><//>` : null}
   </div>`;
 }
 

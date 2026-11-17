@@ -34,7 +34,15 @@ export function parseScore(s) {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
-export const CLASS_COLORS = ['#3558e6', '#0f9d8a', '#d9822b', '#b4469b', '#4f8f2f', '#c8465a', '#6b5bd6', '#0e7fb8'];
+export const CLASS_COLORS = ['#3558e6', '#0f9d8a', '#d9822b', '#b4469b', '#4f8f2f', '#c8465a', '#6b5bd6', '#0e7fb8', '#e0b000', '#8e5b3a', '#e0679a', '#4a5568'];
+/** Couleur d'une classe : indice de palette (anciennes données) ou code #rrggbb choisi par l'utilisateur. */
+export const classColor = c => (c && typeof c.color === 'string' && c.color[0] === '#') ? c.color : CLASS_COLORS[((c && c.color) || 0) % CLASS_COLORS.length];
+/** Couleur de texte lisible (noir ou blanc) sur un fond donné. */
+export function textOn(hex) {
+  const n = parseInt(String(hex).slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? '#1b2433' : '#ffffff';
+}
 
 export const byName = (a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr') || (a.prenom || '').localeCompare(b.prenom || '', 'fr');
 export const initials = s => ((s.prenom || '')[0] || '') + ((s.nom || '')[0] || '');
