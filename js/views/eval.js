@@ -15,6 +15,7 @@ export function Eval({ id, q }) {
   const [struct, setStruct] = useState(q.edit === '1');
   const [meta, setMeta] = useState(false);
   const [bad, setBad] = useState(false);
+  const [bilan, setBilan] = useState(false);
   const [grp, setGrp] = useState('');
   const [transposed, setTransposed] = useState(() => { try { return localStorage.getItem('transposed') === '1'; } catch { return false; } });
   const inp = useRef();
@@ -128,6 +129,7 @@ export function Eval({ id, q }) {
       <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)}/20 · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
       ${groups.length ? html`<select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${grp} onChange=${e => { setGrp(e.target.value); setSel(null); }}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn small" onClick=${() => { const v = !transposed; setTransposed(v); try { localStorage.setItem('transposed', v ? '1' : '0'); } catch { /* */ } }}>⇄ ${transposed ? 'Élèves en lignes' : 'Élèves en colonnes'}</button>
+      <button class="btn small" onClick=${() => setBilan(true)}>Bilan des compétences</button>
       <button class="btn small" onClick=${() => setStruct(true)}>✎ Barème et compétences</button>
       <button class="btn small" onClick=${() => setMeta(true)}>⚙</button></div>
     <p class="hint">Touche une case, puis une valeur rapide ou saisis les points (<b>x</b> = question non évaluée, exclue du barème ; <b>–</b> = non traité). Les cases vides sont en jaune. La colonne ± permet un bonus ou un malus sur la note (ex. −1).</p>
@@ -155,6 +157,7 @@ export function Eval({ id, q }) {
         <button onClick=${() => commit('x')} title="Non évalué">x</button><button onClick=${() => commit('-')} title="Non traité">–</button><button onClick=${() => commit(null, false)} title="Effacer">⌫</button></div>
       <input ref=${inp} class=${bad ? 'bad' : ''} inputmode="decimal" placeholder="points" onKeyDown=${onKey} aria-label="Points" />
       <button class="btn" onClick=${() => move('next')}>Suivant ›</button><button class="btn ghost" onClick=${() => setSel(null)}>✕</button></div>` : null}
+    ${bilan ? html`<${Bilan} ev=${ev} studs=${studs} lab=${lab} stats=${stats} comps=${usedComps} onClose=${() => setBilan(false)} />` : null}
     ${struct ? html`<${Structure} ev=${ev} onClose=${() => setStruct(false)} />` : null}
     ${meta ? html`<${Meta} ev=${ev} onClose=${() => setMeta(false)} />` : null}
   </div>`;
@@ -202,4 +205,14 @@ function Structure({ ev, onClose }) {
           <button class="btn small ghost" aria-label="Supprimer la question" onClick=${() => upd(ei, x => { x.questions.splice(qi, 1); })}>🗑</button></div></div>`)}
       <div><button class="btn small" onClick=${() => upd(ei, x => { x.questions.push({ id: uid(), label: String(x.questions.length + 1), max: 1, comps: [] }); })}>＋ Question</button></div></div>`)}
     <div><button class="btn" onClick=${() => setEx([...ex, { id: uid(), title: 'Exercice ' + (ex.length + 1), questions: [{ id: uid(), label: '1', max: 1, comps: [] }] }])}>＋ Exercice</button></div><//>`;
+}
+
+function Bilan({ ev, studs, lab, stats, comps, onClose }) {
+  return html`<${Modal} wide title=${'Bilan des compétences · ' + ev.name} onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>Fermer</button>`}>
+    ${!comps.length ? html`<p class="muted">Aucune compétence n'est rattachée aux questions de cette évaluation.</p>` : html`
+    <div class="bilan-legend"><span><i class="lvc lv-1">1</i></span><span><i class="lvc lv-2">2</i></span><span><i class="lvc lv-3">3</i></span><span><i class="lvc lv-4">4</i></span></div>
+    <div class="gridwrap" style="max-height:62dvh"><table class="bilan">
+      <thead><tr><th class="stk">Élève</th>${comps.map(c => html`<th>${c}</th>`)}</tr></thead>
+      <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th>${comps.map(c => { const lv = stats[s.id].levels[c]; return html`<td>${lv ? html`<i class=${'lvc lv-' + lv}>${lv}</i>` : null}</td>`; })}</tr>`)}</tbody>
+    </table></div>`}<//>`;
 }
