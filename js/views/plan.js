@@ -59,8 +59,8 @@ export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onS
     const s = byId[seatMap[it.id]];
     if (!s) return html`<span>${mode === 'template' ? '' : 'libre'}</span>`;
     const p = photoOf(s.id);
-    return html`<div class="ph">${p ? html`<img src=${p} alt="" draggable="false" />` : html`<span>${initials(s)}</span>`}</div><div class="fn">${lab[s.id]}</div>
-      ${s.amenagement ? html`<span class="amen" title=${s.amenagement}>★</span>` : null}${seatExtra ? seatExtra(s) : null}`;
+    return html`<div class="ph">${p ? html`<img src=${p} alt="" draggable="false" />` : html`<span>${initials(s)}</span>`}</div><div class="fn" style=${{ fontSize: nameSize(lab[s.id], it.w) + 'px' }}>${lab[s.id].replace(/-/g, '-\u200b')}</div>
+      ${seatExtra ? seatExtra(s) : null}`;
   }
 
   function onDown(e, it) {
@@ -211,6 +211,15 @@ function GridGen({ onClose, onGen }) {
 const loadImg = url => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function fit(ctx, text, maxW) { let s = text; while (s.length > 1 && ctx.measureText(s).width > maxW) s = s.slice(0, -1); return s === text ? s : s + '…'; }
+/** Taille de police d'un prénom : tient sur une ligne, ou sur deux (coupure après un tiret ou une espace) sans jamais être tronqué. */
+export function nameSize(text, w) {
+  const avail = w - 12, longest = Math.max(...text.split(/(?<=[- ])/).map(x => x.trim().length));
+  const one = Math.floor(avail / (text.length * 0.6));
+  if (one >= 15) return 15;
+  return Math.max(9, Math.min(15, Math.max(one, Math.floor(avail / (longest * 0.6)))));
+}
+/** Réduit la police pour que le texte tienne en entier dans maxW. */
+function shrink(ctx, text, maxW, size, weight = 700) { let z = size; do { ctx.font = `${weight} ${z}px system-ui, sans-serif`; z--; } while (z >= 8 && ctx.measureText(text).width > maxW); }
 export async function renderPlanImage(room, seatMap, byId, lab, title) {
   const K = 2, RH = roomH(room), pad = 0;
   const c = document.createElement('canvas'); c.width = ROOM_W * K; c.height = RH * K;
@@ -240,8 +249,16 @@ export async function renderPlanImage(room, seatMap, byId, lab, title) {
       ctx.fillText(initials(s).toUpperCase(), px + pw / 2, py + ph / 2);
     }
     ctx.restore();
-    ctx.fillStyle = '#1b2333'; ctx.font = '700 15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(fit(ctx, lab[s.id] || s.prenom, it.w - 8), it.x + it.w / 2, it.y + it.h - 15);
+    ctx.fillStyle = '#1b2333'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const nm = lab[s.id] || s.prenom, fs = nameSize(nm, it.w);
+    ctx.font = `700 ${fs}px system-ui, sans-serif`;
+    let lines = [nm];
+    if (ctx.measureText(nm).width > it.w - 8) {
+      lines = []; let cur = '';
+      for (const seg of nm.split(/(?<=[- ])/)) { if (cur && ctx.measureText((cur + seg).trim()).width > it.w - 8) { lines.push(cur.trim()); cur = seg; } else cur += seg; }
+      lines.push(cur.trim());
+    }
+    lines.forEach((ln, i) => ctx.fillText(ln, it.x + it.w / 2, it.y + it.h - 15 - (lines.length - 1 - i) * (fs + 1) + (lines.length > 1 ? -(fs + 1) / 2 + 0 : 0)));
   }
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
