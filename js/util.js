@@ -46,6 +46,16 @@ export function textOn(hex) {
 
 export const byName = (a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr') || (a.prenom || '').localeCompare(b.prenom || '', 'fr');
 export const initials = s => ((s.prenom || '')[0] || '') + ((s.nom || '')[0] || '');
+/** Étiquettes pour le plan : prénom seul, + initiale du nom si deux élèves de la liste ont le même prénom. */
+export function seatLabels(studs) {
+  const cnt = {};
+  for (const s of studs) { const k = norm(s.prenom); cnt[k] = (cnt[k] || 0) + 1; }
+  return Object.fromEntries(studs.map(s => {
+    const pr = (s.prenom || '').trim() || (s.nom || '').trim();
+    const ini = (s.nom || '').trim().charAt(0).toUpperCase();
+    return [s.id, cnt[norm(s.prenom)] > 1 && ini ? `${pr} ${ini}.` : pr];
+  }));
+}
 export const displayName = s => `${s.nom} ${s.prenom}`.trim();
 
 export function download(blob, name) {

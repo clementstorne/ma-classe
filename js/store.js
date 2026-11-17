@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { uid, byName } from './util.js';
 
 export const ROOM_W = 1200, ROOM_H = 760;
+export const SEAT_W = 88, SEAT_H = 118; // place verticale : photo + prénom
 export const S = { data: null, photos: {}, ready: false };
 const subs = new Set();
 export const subscribe = fn => { subs.add(fn); return () => subs.delete(fn); };
@@ -30,11 +31,12 @@ export function mutate(fn) {
 
 export function defaultRoomSeats(cols = 6, rows = 5, group = 2) {
   const items = [{ id: uid(), kind: 'label', x: 430, y: 24, w: 340, h: 44, text: 'Tableau' }];
-  const sw = 140, sh = 76, gap = 8, gGap = 40, x0 = 60, y0 = 130;
+  const sw = SEAT_W, sh = SEAT_H, gap = 10, gGap = 40, y0 = 110;
+  const x0 = Math.round((ROOM_W - (cols * sw + (cols - 1) * gap + (Math.ceil(cols / group) - 1) * gGap)) / 2 / 10) * 10;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const g = Math.floor(c / group);
-      items.push({ id: uid(), kind: 'seat', x: x0 + c * (sw + gap) + g * gGap, y: y0 + r * (sh + 22), w: sw, h: sh });
+      items.push({ id: uid(), kind: 'seat', x: x0 + c * (sw + gap) + g * gGap, y: y0 + r * (sh + 8), w: sw, h: sh });
     }
   }
   return items;
@@ -62,7 +64,7 @@ export function defaultData() {
       { id: 'e1', name: 'Collège Victor Schoelcher', type: 'semestre', periods: defaultPeriods('semestre') },
       { id: 'e2', name: 'Collège Le Segrais', type: 'trimestre', periods: defaultPeriods('trimestre') }],
     classes: [], students: [],
-    rooms: [{ id: 'r1', name: 'Salle 1', items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', items: defaultRoomSeats() }],
+    rooms: [{ id: 'r1', name: 'Salle 1', v: 2, items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', v: 2, items: defaultRoomSeats() }],
     plans: {}, slots: [], overrides: {}, holidays: [], sessions: {}, events: [], evals: [],
   };
 }
@@ -71,6 +73,14 @@ function migrate(d) {
   const base = defaultData();
   for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
   d.settings = { ...base.settings, ...d.settings };
+  // v2 : les places deviennent des rectangles verticaux (photo + prénom)
+  for (const r of d.rooms) if (r.v !== 2) {
+    r.v = 2;
+    for (const it of r.items) if (it.kind === 'seat' && it.w > it.h) {
+      it.x += Math.round((it.w - SEAT_W) / 2); it.w = SEAT_W; it.h = SEAT_H;
+      it.y = Math.max(0, Math.min(ROOM_H - SEAT_H, Math.round(110 + (it.y - 130) * (SEAT_H + 8) / 98)));
+    }
+  }
   return d;
 }
 

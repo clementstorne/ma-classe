@@ -1,9 +1,9 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, groupStudents, sessionKey, roomById, getPlan, occurrence } from '../store.js';
+import { useStore, mutate, classById, groupStudents, studentsOf, sessionKey, roomById, getPlan, occurrence } from '../store.js';
 import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
-import { fmtDateLong, uid, displayName } from '../util.js';
+import { fmtDateLong, uid, displayName, seatLabels } from '../util.js';
 import { go } from '../router.js';
 
 export function Appel({ classId, date, slotId }) {
@@ -63,7 +63,7 @@ export function Appel({ classId, date, slotId }) {
         <${Avatar} s=${s} size=${48} /><div class="who" onClick=${() => setFiche(s.id)}><b>${s.nom}</b><span>${s.prenom}${s.amenagement ? html` <span style="color:var(--warn)">★</span>` : ''}</span></div>${controls(s)}</div>`)}</div>`
       : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${d.rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
           <span class="hint">Touche un élève pour ouvrir ses actions.</span></div>
-        ${room ? html`<${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} mode="view" onSeatTap=${it => { const sid = plan.seatMap[it.id]; if (sid) setPop(sid); }}
+        ${room ? html`<${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} labels=${seatLabels(studentsOf(d, classId))} mode="view" onSeatTap=${it => { const sid = plan.seatMap[it.id]; if (sid) setPop(sid); }}
           seatClass=${s => statusOf(s.id) === 'P' ? '' : statusOf(s.id)}
           seatExtra=${s => html`<span class="badge">${has(s.id, 'devoir') ? '📝' : ''}${has(s.id, 'materiel') ? '🎒' : ''}</span>`} />` : null}
         ${unplaced.length ? html`<h3 style="margin:14px 0 8px">Élèves non placés sur ce plan</h3><div class="appel-grid">${unplaced.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>

@@ -1,7 +1,7 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, studentsOf, getPlan, planKey, ROOM_W, ROOM_H } from '../store.js';
+import { useStore, mutate, classById, roomById, studentsOf, photoOf, getPlan, planKey, ROOM_W, ROOM_H, SEAT_W, SEAT_H } from '../store.js';
 import { Modal, Field, Avatar, Empty, toast } from './common.js';
-import { uid, displayName } from '../util.js';
+import { uid, displayName, initials, seatLabels } from '../util.js';
 import { go } from '../router.js';
 
 /* ---------- Moteur de glisser-déposer (souris + tactile) ---------- */
@@ -43,7 +43,8 @@ export function unplace(plan, sid) { for (const k of Object.keys(plan.seatMap)) 
 
 /* ---------- Canevas ---------- */
 /** mode: 'place' | 'view' | 'template' */
-export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onSeatDrop, onItemChange, seatClass, seatExtra }) {
+export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onSeatDrop, onItemChange, seatClass, seatExtra, labels }) {
+  const lab = labels || seatLabels(Object.values(byId));
   const wrap = useRef();
   const [scale, setScale] = useState(0.8);
   useEffect(() => {
@@ -56,7 +57,8 @@ export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onS
   function seatContent(it) {
     const s = byId[seatMap[it.id]];
     if (!s) return html`<span>${mode === 'template' ? '' : 'libre'}</span>`;
-    return html`<${Avatar} s=${s} size=${38} /><div class="nm"><b>${s.nom}</b><span>${s.prenom}</span></div>
+    const p = photoOf(s.id);
+    return html`<div class="ph">${p ? html`<img src=${p} alt="" draggable="false" />` : html`<span>${initials(s)}</span>`}</div><div class="fn">${lab[s.id]}</div>
       ${s.amenagement ? html`<span class="amen" title=${s.amenagement}>★</span>` : null}${seatExtra ? seatExtra(s) : null}`;
   }
 
@@ -80,7 +82,7 @@ export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onS
     if (it.kind === 'label') return;
     const sid = seatMap[it.id];
     if (!sid) { onSeatTap && onSeatTap(it); return; }
-    startDrag(e, { label: displayName(byId[sid]), onTap: () => onSeatTap && onSeatTap(it), onDrop: t => onSeatDrop && onSeatDrop(sid, t) });
+    startDrag(e, { label: lab[sid] || displayName(byId[sid]), onTap: () => onSeatTap && onSeatTap(it), onDrop: t => onSeatDrop && onSeatDrop(sid, t) });
   }
 
   return html`<div class="plan-wrap" ref=${wrap} style=${{ height: ROOM_H * scale + 'px' }}>
@@ -138,7 +140,7 @@ export function PlanPage({ classId, roomId }) {
 
   /* ---- modèle de salle ---- */
   const itemChange = (id, patch) => edit((p, r) => Object.assign(r.items.find(i => i.id === id), patch));
-  const addSeat = () => edit((p, r) => { r.items.push({ id: uid(), kind: 'seat', x: 500, y: 300, w: 140, h: 76 }); });
+  const addSeat = () => edit((p, r) => { r.items.push({ id: uid(), kind: 'seat', x: 500, y: 300, w: SEAT_W, h: SEAT_H }); });
   const addLabel = () => { const t = prompt('Texte du repère (ex. Tableau, Bureau, Porte, Fenêtre)', 'Bureau'); if (t) edit((p, r) => r.items.push({ id: uid(), kind: 'label', x: 500, y: 20, w: 240, h: 44, text: t })); };
   const delSel = () => { if (!selSeat) return; edit((p, r) => { r.items = r.items.filter(i => i.id !== selSeat); delete p.seatMap[selSeat]; }); setSelSeat(null); };
   const dupSel = () => { if (!selSeat) return; edit((p, r) => { const i = r.items.find(x => x.id === selSeat); if (i) r.items.push({ ...i, id: uid(), x: Math.min(ROOM_W - i.w, i.x + 20), y: Math.min(ROOM_H - i.h, i.y + 20) }); }); };
@@ -179,11 +181,11 @@ export function PlanPage({ classId, roomId }) {
 function GridGen({ onClose, onGen }) {
   const [rows, setRows] = useState(5), [cols, setCols] = useState(6), [group, setGroup] = useState(2);
   function gen() {
-    const sw = 140, sh = 76, gap = 8, gGap = 40, y0 = 130;
+    const sw = SEAT_W, sh = SEAT_H, gap = 10, gGap = 40, y0 = 110;
     const groups = Math.ceil(cols / group);
     const totalW = cols * sw + (cols - 1) * gap + (groups - 1) * gGap;
     const x0 = Math.max(10, Math.round((ROOM_W - totalW) / 2 / 10) * 10);
-    const rowH = Math.min(sh + 22, Math.floor((ROOM_H - y0 - 10) / rows));
+    const rowH = Math.min(sh + 8, Math.floor((ROOM_H - y0 - 10) / rows));
     const items = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
       items.push({ id: uid(), kind: 'seat', x: x0 + c * (sw + gap) + Math.floor(c / group) * gGap, y: y0 + r * rowH, w: sw, h: Math.min(sh, rowH - 6) });
