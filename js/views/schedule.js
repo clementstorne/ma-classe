@@ -9,7 +9,8 @@ const dayIdx = date => (fromISO(date).getDay() + 6) % 7;
 
 export function Schedule() {
   const d = useStore();
-  const [ws, setWs] = useState(mondayOf(new Date()));
+  const [ws, setWsState] = useState(() => { try { const v = sessionStorage.getItem('edtWeek'); if (v) return fromISO(v); } catch { /* */ } return mondayOf(new Date()); });
+  const setWs = w => { setWsState(w); try { sessionStorage.setItem('edtWeek', iso(w)); } catch { /* */ } };
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(null);
 
@@ -68,7 +69,7 @@ export function Schedule() {
       return;
     }
     if (o.cancelled) return toast('Cette séance est annulée');
-    go(`/class/${o.classId}/eleves?date=${o.date}&slot=${o.id}`);
+    go(`/appel/${o.classId}/${o.date}/${o.id}`);
   }
   const setScope = scope => {
     const b = form.base, o = occurrence(d, form.id, form.date);
