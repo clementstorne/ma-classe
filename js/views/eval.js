@@ -7,7 +7,7 @@ import { go } from '../router.js';
 
 const f1 = n => (n == null ? '' : (Math.round(n * 10) / 10).toString().replace('.', ','));
 
-const FIRST_W = 150, COL_W = 60;
+const FIRST_W = 160, COL_W = 76;
 export function Eval({ id, q }) {
   const d = useStore();
   const ev = d.evals.find(e => e.id === id);
@@ -39,7 +39,6 @@ export function Eval({ id, q }) {
   const items = [];
   for (const ex of ev.exercises) { for (const qq of ex.questions) items.push({ kind: 'q', ex, q: qq }); items.push({ kind: 'tot', ex }); }
   items.push({ kind: 'adj' }, { kind: 'note' }, { kind: 'n20' });
-  usedComps.forEach(c => items.push({ kind: 'comp', c }));
 
   const setScore = (sid, qid, v) => mutate(dd => {
     const e = dd.evals.find(x => x.id === id); const sc = e.scores[sid] ||= {};
@@ -137,7 +136,7 @@ export function Eval({ id, q }) {
       <colgroup><col style=${{ width: FIRST_W + 'px' }} />${Array.from({ length: transposed ? studs.length + 1 : items.length }, () => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       ${!transposed ? html`
         <thead><tr><th class="stk" rowspan="2">Élève</th>
-          ${ev.exercises.map(ex => html`<th colspan=${exSpan(ex)}>${ex.title}</th>`)}<th colspan="3">Note</th>${usedComps.length ? html`<th colspan=${usedComps.length}>Compétences</th>` : null}</tr>
+          ${ev.exercises.map(ex => html`<th colspan=${exSpan(ex)}>${ex.title}</th>`)}<th colspan="3">Note</th></tr>
           <tr>${items.map(it => html`<th class=${it.kind === 'q' ? '' : 'tot'}>${head(it)}</th>`)}</tr></thead>
         <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th>${items.map(it => cell(s, it))}</tr>`)}</tbody>
         <tfoot><tr><th class="stk">Moyenne / réussite</th>${items.map(it => html`<td>${foot(it)}</td>`)}</tr></tfoot>`
