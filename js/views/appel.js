@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, studentsOf, sessionKey, roomById, getPlan, occurrence } from '../store.js';
+import { useStore, mutate, classById, groupStudents, sessionKey, roomById, getPlan, occurrence } from '../store.js';
 import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
@@ -16,7 +16,7 @@ export function Appel({ classId, date, slotId }) {
   const [roomId, setRoomId] = useState((slot && slot.roomId) || (d.rooms[0] && d.rooms[0].id));
   if (!cls) return html`<${Empty} title="Classe introuvable" />`;
   const key = sessionKey(classId, date, slotId === 'x' ? null : slotId);
-  const studs = studentsOf(d, classId);
+  const studs = groupStudents(d, classId, slot && slot.group);
   const se = d.sessions[key];
   const marks = se ? se.marks : {};
   const ev = type => d.events.filter(e => e.sessionKey === key && e.type === type);
@@ -52,13 +52,13 @@ export function Appel({ classId, date, slotId }) {
   const back = () => go(`/class/${classId}/eleves?date=${date}&slot=${slotId === 'x' ? '' : slotId}`);
 
   return html`<div class="page">
-    <div class="page-head"><button class="btn ghost" onClick=${back}>‹ ${cls.name}</button><h1>Appel · ${cls.name}</h1>
+    <div class="page-head"><button class="btn ghost" onClick=${back}>‹ ${cls.name}</button><h1>Appel · ${cls.name}${slot && slot.group ? ' · ' + slot.group : ''}</h1>
       <span class="sub">${fmtDateLong(date)}${slot ? ' · ' + slot.start + '–' + slot.end : ''}</span><span class="grow"></span>
       <div class="seg"><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button><button class=${view === 'plan' ? 'on P' : ''} onClick=${() => setView('plan')}>Plan</button></div></div>
     <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">Présents ${studs.length - nA - nR}</span><span class="counter a">Absents ${nA}</span><span class="counter r">Retards ${nR}</span>
       <span class="counter">📝 ${ev('devoir').length}</span><span class="counter">🎒 ${ev('materiel').length}</span></div><span class="grow"></span>
       ${se && se.validated ? html`<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Appel enregistré</span>` : html`<button class="btn primary" onClick=${validate}>✓ Tous présents / valider</button>`}</div>
-    ${!studs.length ? html`<${Empty} title="Aucun élève dans cette classe" />` : null}
+    ${!studs.length ? html`<${Empty} title=${slot && slot.group ? 'Aucun élève dans le groupe ' + slot.group : 'Aucun élève dans cette classe'}><p>Affecte les élèves à un groupe depuis le dossier de la classe (onglet Élèves).</p><//>` : null}
     ${view === 'list' ? html`<div class="appel-grid">${studs.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>
         <${Avatar} s=${s} size=${48} /><div class="who" onClick=${() => setFiche(s.id)}><b>${s.nom}</b><span>${s.prenom}${s.amenagement ? html` <span style="color:var(--warn)">★</span>` : ''}</span></div>${controls(s)}</div>`)}</div>`
       : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${d.rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>

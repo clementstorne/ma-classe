@@ -40,7 +40,7 @@ export function RosterImport({ classId, onClose }) {
   const [rows, setRows] = useState(null);
   const [text, setText] = useState('');
   const [hasHeader, setHasHeader] = useState(true);
-  const [map, setMap] = useState({ nom: 0, prenom: -1, amen: -1 });
+  const [map, setMap] = useState({ nom: 0, prenom: -1, amen: -1, group: -1 });
   const [err, setErr] = useState('');
 
   function load(r) {
@@ -49,9 +49,9 @@ export function RosterImport({ classId, onClose }) {
     const head = r[0].map(c => norm(String(c)));
     const find = re => head.findIndex(h => re.test(h));
     const looksHeader = head.some(h => /^(nom|prenom|eleve|nom prenom)/.test(h));
-    const iNom = find(/^nom$|^nom de famille/), iPre = find(/^prenom/), iEl = find(/^eleve|^nom prenom|^identite/), iAm = find(/amenag|pap|ppre|besoin|pai|mdph/);
+    const iNom = find(/^nom$|^nom de famille/), iPre = find(/^prenom/), iEl = find(/^eleve|^nom prenom|^identite/), iAm = find(/amenag|pap|ppre|besoin|pai|mdph/), iGr = find(/^groupe|^grp|^demi/);
     setHasHeader(looksHeader);
-    setMap({ nom: iNom >= 0 ? iNom : iEl >= 0 ? iEl : 0, prenom: iPre >= 0 ? iPre : -1, amen: iAm >= 0 ? iAm : -1 });
+    setMap({ nom: iNom >= 0 ? iNom : iEl >= 0 ? iEl : 0, prenom: iPre >= 0 ? iPre : -1, amen: iAm >= 0 ? iAm : -1, group: iGr >= 0 ? iGr : -1 });
     setRows(r);
   }
   async function onFile(e) {
@@ -68,25 +68,27 @@ export function RosterImport({ classId, onClose }) {
     let nom, prenom;
     if (map.prenom >= 0) { nom = String(r[map.nom] || '').trim(); prenom = String(r[map.prenom] || '').trim(); }
     else ({ nom, prenom } = splitFullName(String(r[map.nom] || '')));
-    return { nom: nom.toUpperCase(), prenom, amenagement: map.amen >= 0 ? String(r[map.amen] || '').trim() : '' };
+    return { nom: nom.toUpperCase(), prenom, amenagement: map.amen >= 0 ? String(r[map.amen] || '').trim() : '', group: map.group >= 0 ? String(r[map.group] || '').trim() : '' };
   }).filter(s => s.nom);
 
   function doImport() {
     let added = 0, updated = 0;
     mutate(dd => {
       const existing = dd.students.filter(s => s.classId === classId);
+      const cl = dd.classes.find(c => c.id === classId);
       for (const p of parsed) {
+        if (p.group) { cl.groups ||= []; if (!cl.groups.includes(p.group)) cl.groups.push(p.group); }
         const k = norm(p.nom + ' ' + p.prenom);
         const ex = existing.find(s => norm(s.nom + ' ' + s.prenom) === k);
-        if (ex) { if (p.amenagement) ex.amenagement = p.amenagement; updated++; }
-        else { dd.students.push({ id: uid(), classId, nom: p.nom, prenom: p.prenom, amenagement: p.amenagement, hasPhoto: false }); added++; }
+        if (ex) { if (p.amenagement) ex.amenagement = p.amenagement; if (p.group) ex.group = p.group; updated++; }
+        else { dd.students.push({ id: uid(), classId, nom: p.nom, prenom: p.prenom, amenagement: p.amenagement, group: p.group, hasPhoto: false }); added++; }
       }
     });
     toast(`${added} élève(s) ajouté(s)${updated ? ', ' + updated + ' déjà présent(s)' : ''}`);
     onClose();
   }
 
-  const colSel = (key, optional) => html`<${Field} label=${key === 'nom' ? 'Colonne « Nom » (ou « NOM Prénom »)' : key === 'prenom' ? 'Colonne « Prénom »' : 'Colonne « Aménagement » (facultatif)'}>
+  const colSel = (key, optional) => html`<${Field} label=${key === 'nom' ? 'Colonne « Nom » (ou « NOM Prénom »)' : key === 'prenom' ? 'Colonne « Prénom »' : key === 'group' ? 'Colonne « Groupe » (facultatif)' : 'Colonne « Aménagement » (facultatif)'}>
     <select value=${map[key]} onChange=${e => setMap({ ...map, [key]: Number(e.target.value) })}>
       ${optional ? html`<option value="-1">— aucune —</option>` : null}
       ${Array.from({ length: ncols }, (_, i) => html`<option value=${i}>${colName(i)}</option>`)}</select><//>`;
@@ -101,10 +103,10 @@ export function RosterImport({ classId, onClose }) {
       <div><button class="btn" disabled=${!text.trim()} onClick=${onPaste}>Utiliser le texte collé</button></div>
       ${err ? html`<p style="color:var(--ko)">${err}</p>` : null}` : html`
       <label class="row"><input type="checkbox" checked=${hasHeader} onChange=${e => setHasHeader(e.target.checked)} /> La première ligne contient les titres de colonnes</label>
-      <div class="row">${colSel('nom')}${colSel('prenom', true)}${colSel('amen', true)}</div>
+      <div class="row">${colSel('nom')}${colSel('prenom', true)}${colSel('amen', true)}${colSel('group', true)}</div>
       <p class="hint">Si tu ne choisis pas de colonne « Prénom », les mots en MAJUSCULES sont pris pour le nom et le reste pour le prénom.</p>
-      <div class="table-wrap" style="max-height:260px"><table class="t"><thead><tr><th>Nom</th><th>Prénom</th><th>Aménagement</th></tr></thead>
-        <tbody>${parsed.slice(0, 60).map(p => html`<tr><td>${p.nom}</td><td>${p.prenom}</td><td>${p.amenagement}</td></tr>`)}</tbody></table></div>`}
+      <div class="table-wrap" style="max-height:260px"><table class="t"><thead><tr><th>Nom</th><th>Prénom</th><th>Aménagement</th><th>Groupe</th></tr></thead>
+        <tbody>${parsed.slice(0, 60).map(p => html`<tr><td>${p.nom}</td><td>${p.prenom}</td><td>${p.amenagement}</td><td>${p.group}</td></tr>`)}</tbody></table></div>`}
   <//>`;
 }
 

@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence } from '../store.js';
+import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf } from '../store.js';
 import { mondayOf, addDays, iso, fromISO, toMin, fromMin, DAYS, uid, classColor, textOn, todayISO, fmtDateLong } from '../util.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { go } from '../router.js';
@@ -49,7 +49,7 @@ export function Schedule() {
   const firstRoom = d.rooms[0] ? d.rooms[0].id : '';
   function newForm(date, start, kind) {
     const s = start || '08:00';
-    setForm({ mode: 'new', kind: kind || 'recurring', date, day: dayIdx(date), start: s, end: fromMin(toMin(s) + 55), classId: firstClass, roomId: firstRoom, week: '' });
+    setForm({ mode: 'new', kind: kind || 'recurring', date, day: dayIdx(date), start: s, end: fromMin(toMin(s) + 55), classId: firstClass, roomId: firstRoom, week: '', group: '' });
   }
   function clickColumn(e, date) {
     if (!edit || e.target.closest('.slot')) return;
@@ -58,11 +58,11 @@ export function Schedule() {
   }
   function openOcc(o) {
     if (edit) {
-      if (o.oneOff) setForm({ mode: 'edit', kind: 'oneoff', id: o.id, date: o.date, start: o.start, end: o.end, classId: o.classId, roomId: o.roomId || '', week: '' });
+      if (o.oneOff) setForm({ mode: 'edit', kind: 'oneoff', id: o.id, date: o.date, start: o.start, end: o.end, classId: o.classId, roomId: o.roomId || '', week: '', group: o.group || '' });
       else {
         const base = d.slots.find(s => s.id === o.id);
         setForm({ mode: 'edit', kind: 'recurring', scope: 'once', id: o.id, date: o.date, cancelled: o.cancelled, base,
-          day: base.day, week: base.week || '', start: o.start, end: o.end, classId: o.classId, roomId: o.roomId || '' });
+          day: base.day, week: base.week || '', start: o.start, end: o.end, classId: o.classId, roomId: o.roomId || '', group: o.group || '' });
       }
       return;
     }
@@ -72,8 +72,8 @@ export function Schedule() {
   const setScope = scope => {
     const b = form.base, o = occurrence(d, form.id, form.date);
     setForm(scope === 'all'
-      ? { ...form, scope, start: b.start, end: b.end, classId: b.classId, roomId: b.roomId || '' }
-      : { ...form, scope, start: o.start, end: o.end, classId: o.classId, roomId: o.roomId || '' });
+      ? { ...form, scope, start: b.start, end: b.end, classId: b.classId, roomId: b.roomId || '', group: b.group || '' }
+      : { ...form, scope, start: o.start, end: o.end, classId: o.classId, roomId: o.roomId || '', group: o.group || '' });
   };
 
   function save() {
@@ -82,16 +82,16 @@ export function Schedule() {
     if (toMin(f.start) >= toMin(f.end)) return toast('L\'heure de fin doit suivre le début');
     mutate(dd => {
       if (f.mode === 'new') {
-        if (f.kind === 'oneoff') dd.slots.push({ id: uid(), date: f.date, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId });
-        else dd.slots.push({ id: uid(), day: f.day, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId, week: f.week });
+        if (f.kind === 'oneoff') dd.slots.push({ id: uid(), date: f.date, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId, group: f.group });
+        else dd.slots.push({ id: uid(), day: f.day, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId, week: f.week, group: f.group });
       } else if (f.kind === 'oneoff') {
-        Object.assign(dd.slots.find(s => s.id === f.id), { date: f.date, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId });
+        Object.assign(dd.slots.find(s => s.id === f.id), { date: f.date, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId, group: f.group });
       } else if (f.scope === 'all') {
-        Object.assign(dd.slots.find(s => s.id === f.id), { day: f.day, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId, week: f.week });
+        Object.assign(dd.slots.find(s => s.id === f.id), { day: f.day, start: f.start, end: f.end, classId: f.classId, roomId: f.roomId, week: f.week, group: f.group });
       } else {
         const base = dd.slots.find(s => s.id === f.id), key = `${f.id}|${f.date}`;
         const o = { ...(dd.overrides[key] || {}) };
-        for (const k of ['start', 'end', 'classId', 'roomId']) { if ((f[k] || '') !== (base[k] || '')) o[k] = f[k]; else delete o[k]; }
+        for (const k of ['start', 'end', 'classId', 'roomId', 'group']) { if ((f[k] || '') !== (base[k] || '')) o[k] = f[k]; else delete o[k]; }
         if (Object.keys(o).length) dd.overrides[key] = o; else delete dd.overrides[key];
       }
     });
@@ -160,7 +160,7 @@ export function Schedule() {
           const note = o.cancelled ? 'annulée' : o.oneOff ? 'ponctuelle' : o.modified ? 'modifiée' : '';
           return html`<button class=${'slot' + (o.cancelled ? ' cancelled' : '')} key=${o.id} style=${{ background: bg, color: textOn(bg), top: (toMin(o.start) - gStart) * PPM + 'px', height: (toMin(o.end) - toMin(o.start)) * PPM - 2 + 'px' }}
             onClick=${e => { e.stopPropagation(); openOcc(o); }}>
-            <b>${c ? c.name : '?'}${o.week && !o.oneOff ? html` <small style="opacity:.85">· sem. ${o.week}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
+            <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${o.week && !o.oneOff ? html` <small style="opacity:.85">· sem. ${o.week}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
             <span>${o.start}–${o.end}${room ? ' · ' + room.name : ''}</span>
             ${se && se.validated && !o.cancelled ? html`<span class="tag">✓ appel${nAbs ? ' · ' + nAbs + ' abs.' : ''}</span>` : null}
           </button>`;
@@ -175,7 +175,9 @@ export function Schedule() {
       ${recurringEdit ? html`<p style="margin:0"><b>${fmtDateLong(f.date)}</b>${f.cancelled ? html` <span class="chip" style="background:var(--ko-soft);color:var(--ko)">annulée</span>` : ''}</p>
         <div class="seg"><button class=${f.scope === 'once' ? 'on P' : ''} onClick=${() => setScope('once')}>Cette séance seulement</button>
         <button class=${f.scope === 'all' ? 'on P' : ''} onClick=${() => setScope('all')}>Toutes les semaines</button></div>` : null}
-      <${Field} label="Classe"><select value=${f.classId} onChange=${e => setForm({ ...f, classId: e.target.value })}>${d.classes.map(c => html`<option value=${c.id}>${c.name}</option>`)}</select><//>
+      <${Field} label="Classe"><select value=${f.classId} onChange=${e => setForm({ ...f, classId: e.target.value, group: groupsOf(classById(d, e.target.value)).includes(f.group) ? f.group : '' })}>${d.classes.map(c => html`<option value=${c.id}>${c.name}</option>`)}</select><//>
+      ${groupsOf(classById(d, f.classId)).length ? html`<${Field} label="Cours en groupe ?"><select value=${f.group || ''} onChange=${e => setForm({ ...f, group: e.target.value })}>
+        <option value="">Non — classe entière</option>${groupsOf(classById(d, f.classId)).map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select><//>` : null}
       ${f.kind === 'oneoff' ? html`<${Field} label="Date"><input type="date" value=${f.date} onInput=${e => e.target.value && setForm({ ...f, date: e.target.value })} /><//>`
         : f.mode === 'new' ? html`<${Field} label="Jour"><select value=${f.day} onChange=${e => setForm({ ...f, day: Number(e.target.value) })}>${DAYS.map((n, i) => html`<option value=${i}>${n}</option>`)}</select><//>`
         : showWeekDay ? html`<${Field} label="Jour"><select value=${f.day} onChange=${e => setForm({ ...f, day: Number(e.target.value) })}>${DAYS.map((n, i) => html`<option value=${i}>${n}</option>`)}</select><//>` : null}

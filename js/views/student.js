@@ -1,5 +1,5 @@
 import { html, useState, useRef } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, etabOf, currentPeriod, setPhoto, removePhoto, photoOf } from '../store.js';
+import { useStore, mutate, classById, groupsOf, etabOf, currentPeriod, setPhoto, removePhoto, photoOf } from '../store.js';
 import { Modal, Field, Avatar, toast } from './common.js';
 import { resizeImage, uid, fmtDateShort, todayISO, displayName } from '../util.js';
 
@@ -55,6 +55,7 @@ export function StudentSheet({ sid, onClose }) {
     </div>
     <div class="row"><${Field} label="Nom"><input value=${s.nom} onInput=${e => set({ nom: e.target.value })} /><//>
       <${Field} label="Prénom"><input value=${s.prenom} onInput=${e => set({ prenom: e.target.value })} /><//></div>
+    ${groupsOf(cls).length ? html`<${Field} label="Groupe"><select value=${s.group || ''} onChange=${e => set({ group: e.target.value })}><option value="">— aucun —</option>${groupsOf(cls).map(g => html`<option value=${g}>${g}</option>`)}</select><//>` : null}
     <${Field} label="Aménagement / à retenir (quelques mots)">
       <textarea placeholder="ex. PAP dys : agrandir les énoncés, tiers-temps" value=${s.amenagement || ''} onInput=${e => set({ amenagement: e.target.value })}></textarea><//>
     <div class="row"><b>Historique</b><span class="grow"></span>

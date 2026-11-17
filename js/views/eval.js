@@ -1,5 +1,5 @@
 import { html, useState, useEffect, useRef } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, studentsOf, etabOf } from '../store.js';
+import { useStore, mutate, classById, studentsOf, groupsOf, etabOf } from '../store.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { studentStats, questionAverage, evalAverage } from '../logic.js';
 import { fmtNum, parseScore, uid, displayName } from '../util.js';
@@ -14,6 +14,7 @@ export function Eval({ id, q }) {
   const [struct, setStruct] = useState(q.edit === '1');
   const [meta, setMeta] = useState(false);
   const [bad, setBad] = useState(false);
+  const [grp, setGrp] = useState('');
   const [transposed, setTransposed] = useState(() => { try { return localStorage.getItem('transposed') === '1'; } catch { return false; } });
   const inp = useRef();
   const cls = ev && classById(d, ev.classId);
@@ -21,7 +22,8 @@ export function Eval({ id, q }) {
   useEffect(() => { if (sel) { setBad(false); const el = document.querySelector('td.q.sel'); el && el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); if (inp.current) { inp.current.value = ''; if (matchMedia('(pointer:fine)').matches) inp.current.focus(); } } }, [sel && sel.sid, sel && sel.qid]);
 
   if (!ev || !cls) return html`<${Empty} title="Évaluation introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
-  const studs = studentsOf(d, ev.classId);
+  const groups = groupsOf(cls);
+  const studs = studentsOf(d, ev.classId).filter(s => !grp || s.group === grp);
   const comps = d.settings.comps;
   const usedComps = comps.filter(c => ev.exercises.some(x => x.questions.some(qq => (qq.comps || []).includes(c))));
   const stats = Object.fromEntries(studs.map(s => [s.id, studentStats(ev, s.id, comps)]));
@@ -121,6 +123,7 @@ export function Eval({ id, q }) {
   return html`<div class="page" style="max-width:none">
     <div class="page-head"><a class="btn ghost" href=${'#/class/' + ev.classId + '/notes'}>‹ ${cls.name}</a><h1>${ev.name}</h1>
       <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)}/20 · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
+      ${groups.length ? html`<select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${grp} onChange=${e => { setGrp(e.target.value); setSel(null); }}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn small" onClick=${() => { const v = !transposed; setTransposed(v); try { localStorage.setItem('transposed', v ? '1' : '0'); } catch { /* */ } }}>⇄ ${transposed ? 'Élèves en lignes' : 'Élèves en colonnes'}</button>
       <button class="btn small" onClick=${() => setStruct(true)}>✎ Barème et compétences</button>
       <button class="btn small" onClick=${() => setMeta(true)}>⚙</button></div>

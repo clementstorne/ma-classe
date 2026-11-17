@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, studentsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
+import { useStore, mutate, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
@@ -76,7 +76,7 @@ export function ClassFolder({ id, tab, q }) {
       <span class="sub">${studs.length} élèves · ${etabOf(d, cls).name}</span><span class="grow"></span>
       <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>⚙ Classe</button></div>
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
-        <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
+        <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${slot && slot.group ? ' · groupe ' + slot.group : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel'}</button>
       ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id}>Plan de classe</a>` : null}</div>`
       : html`<div class="row" style="margin-bottom:12px"><button class="btn" onClick=${() => go(apLink(todayISO(), null))}>Faire l'appel aujourd'hui (hors créneau)</button></div>`}
@@ -84,12 +84,7 @@ export function ClassFolder({ id, tab, q }) {
     ${tab === 'suivi' ? html`<${Suivi} cls=${cls} studs=${studs} onOpen=${setSheet} />`
       : tab === 'notes' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
       : tab === 'plans' ? html`<${PlansList} cls=${cls} />`
-      : html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setImp(true)}>⬆ Importer une liste</button>
-          <button class="btn" onClick=${() => setAddStu({ nom: '', prenom: '' })}>＋ Ajouter un élève</button>
-          <button class="btn" onClick=${() => setPhotos(true)}>📷 Photos en lot</button></div>
-        ${!studs.length ? html`<${Empty} title="Aucun élève"><p>Importe un fichier CSV/Excel ou colle une liste.</p><//>`
-        : html`<div class="list roster">${studs.map(s => html`<div class="item" key=${s.id} onClick=${() => setSheet(s.id)}>
-          <${Avatar} s=${s} size=${44} /><div class="nm"><b>${s.nom}</b> ${s.prenom}${s.amenagement ? html`<div class="small" style="color:var(--warn)">★ ${s.amenagement}</div>` : null}</div><span class="muted">›</span></div>`)}</div>`}`}
+      : html`<${Roster} cls=${cls} studs=${studs} onSheet=${setSheet} onImport=${() => setImp(true)} onAdd=${() => setAddStu({ nom: '', prenom: '' })} onPhotos=${() => setPhotos(true)} />`}
     ${sheet ? html`<${StudentSheet} sid=${sheet} onClose=${() => setSheet(null)} />` : null}
     ${imp ? html`<${RosterImport} classId=${id} onClose=${() => setImp(false)} />` : null}
     ${photos ? html`<${PhotoBatch} classId=${id} onClose=${() => setPhotos(false)} />` : null}
@@ -111,6 +106,10 @@ function Suivi({ cls, studs, onOpen }) {
   const cur = currentPeriod(etab);
   const [per, setPer] = useState(cur ? cur.id : 'all');
   const [sort, setSort] = useState('nom');
+  const [grp, setGrp] = useState('');
+  const groups = groupsOf(cls);
+  const all = studs;
+  studs = grp ? studs.filter(s => s.group === grp) : studs;
   const range = per === 'all' ? null : (etab.periods.find(p => p.id === per) || null);
   const by = suiviStats(d, cls.id, studs.map(s => s.id), range);
   const th = d.settings.threshold;
@@ -123,6 +122,7 @@ function Suivi({ cls, studs, onOpen }) {
     download(new Blob(['﻿' + L.join('\n')], { type: 'text/csv' }), `suivi-${cls.name}.csv`);
   }
   return html`<div class="row" style="margin-bottom:10px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
+      ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>${g}</option>`)}</select>` : null}
       <span class="hint">Seuil d'alerte : ${th} (modifiable dans les réglages)</span><span class="grow"></span><button class="btn small" onClick=${csv}>⬇ CSV</button></div>
     <div class="table-wrap"><table class="t"><thead><tr><th onClick=${() => setSort('nom')}>Élève</th>
       <th onClick=${() => setSort('dev')}>📝 Travail non fait</th><th onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
@@ -162,4 +162,80 @@ function PlansList({ cls }) {
     return html`<div class="item" key=${r.id} onClick=${() => go(`/plan/${cls.id}/${r.id}`)}><div class="grow"><b>${r.name}</b>
       <div class="muted small">${r.items.filter(i => i.kind === 'seat').length} places · ${n} élève(s) placé(s)</div></div><span class="muted">›</span></div>`;
   })}</div><p class="hint">Les salles se gèrent dans les réglages.</p>`;
+}
+
+/* ---------- Liste des élèves avec groupes ---------- */
+function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos }) {
+  const [flt, setFlt] = useState('');
+  const [gm, setGm] = useState(false);
+  const groups = groupsOf(cls);
+  const list = flt === '' ? studs : flt === '-' ? studs.filter(s => !s.group) : studs.filter(s => s.group === flt);
+  const cycle = s => {
+    const order = ['', ...groups];
+    const next = order[(order.indexOf(s.group || '') + 1) % order.length];
+    mutate(dd => { dd.students.find(x => x.id === s.id).group = next; });
+  };
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${onImport}>⬆ Importer une liste</button>
+      <button class="btn" onClick=${onAdd}>＋ Ajouter un élève</button><button class="btn" onClick=${onPhotos}>📷 Photos en lot</button>
+      <button class="btn" onClick=${() => setGm(true)}>👥 Groupes${groups.length ? ' (' + groups.join(', ') + ')' : ''}</button></div>
+    ${groups.length ? html`<div class="row" style="margin-bottom:10px"><div class="seg">
+      <button class=${flt === '' ? 'on P' : ''} onClick=${() => setFlt('')}>Tous (${studs.length})</button>
+      ${groups.map(g => html`<button class=${flt === g ? 'on P' : ''} onClick=${() => setFlt(g)}>${g} (${studs.filter(s => s.group === g).length})</button>`)}
+      <button class=${flt === '-' ? 'on P' : ''} onClick=${() => setFlt('-')}>Sans groupe (${studs.filter(s => !s.group).length})</button></div>
+      <span class="hint">Touche le badge d'un élève pour changer son groupe.</span></div>` : null}
+    ${!studs.length ? html`<${Empty} title="Aucun élève"><p>Importe un fichier CSV/Excel ou colle une liste.</p><//>`
+    : html`<div class="list roster">${list.map(s => html`<div class="item" key=${s.id} onClick=${() => onSheet(s.id)}>
+      <${Avatar} s=${s} size=${44} /><div class="nm"><b>${s.nom}</b> ${s.prenom}${s.amenagement ? html`<div class="small" style="color:var(--warn)">★ ${s.amenagement}</div>` : null}</div>
+      ${groups.length ? html`<button class=${'btn small' + (s.group ? ' on' : '')} style="min-width:56px" onClick=${e => { e.stopPropagation(); cycle(s); }} aria-label="Changer de groupe">${s.group || '—'}</button>` : null}
+      <span class="muted">›</span></div>`)}</div>`}
+    ${gm ? html`<${GroupsModal} cls=${cls} studs=${studs} onClose=${() => setGm(false)} />` : null}`;
+}
+
+function GroupsModal({ cls, studs, onClose }) {
+  const d = useStore();
+  const c = classById(d, cls.id);
+  const groups = groupsOf(c);
+  const setGroups = fn => mutate(dd => { const k = dd.classes.find(x => x.id === cls.id); k.groups = fn([...(k.groups || [])]); });
+  function rename(i, name) {
+    name = name.trim();
+    const old = groups[i];
+    if (!name || name === old || groups.includes(name)) return;
+    mutate(dd => {
+      const k = dd.classes.find(x => x.id === cls.id);
+      k.groups = (k.groups || []).map((g, j) => j === i ? name : g);
+      dd.students.forEach(s => { if (s.classId === cls.id && s.group === old) s.group = name; });
+      dd.slots.forEach(s => { if (s.classId === cls.id && s.group === old) s.group = name; });
+      Object.values(dd.overrides).forEach(o => { if (o.classId === cls.id && o.group === old) o.group = name; });
+    });
+  }
+  function remove(i) {
+    const g = groups[i];
+    const nSlots = d.slots.filter(s => s.classId === cls.id && s.group === g).length;
+    if (!confirm(`Supprimer le groupe « ${g} » ?${nSlots ? ` ${nSlots} créneau(x) de l'emploi du temps passeront en « classe entière ».` : ''} Les élèves seront sans groupe.`)) return;
+    mutate(dd => {
+      const k = dd.classes.find(x => x.id === cls.id);
+      k.groups = (k.groups || []).filter(x => x !== g);
+      dd.students.forEach(s => { if (s.classId === cls.id && s.group === g) s.group = ''; });
+      dd.slots.forEach(s => { if (s.classId === cls.id && s.group === g) s.group = ''; });
+    });
+  }
+  function add() {
+    let n = groups.length + 1, name = 'P' + n;
+    while (groups.includes(name)) name = 'P' + (++n);
+    setGroups(g => [...g, name]);
+  }
+  function split() {
+    if (groups.length < 2) return alert('Crée au moins deux groupes.');
+    if (!confirm('Répartir tous les élèves dans les groupes, par ordre alphabétique (moitié / moitié) ? Les affectations actuelles seront remplacées.')) return;
+    const n = groups.length, per = Math.ceil(studs.length / n);
+    mutate(dd => studs.forEach((s, i) => { dd.students.find(x => x.id === s.id).group = groups[Math.min(n - 1, Math.floor(i / per))]; }));
+  }
+  function clearAll() { mutate(dd => studs.forEach(s => { dd.students.find(x => x.id === s.id).group = ''; })); }
+  return html`<${Modal} title=${'Groupes de la classe ' + cls.name} onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>OK</button>`}>
+    <p class="muted" style="margin:0">Pour les cours en demi-groupe (P1, P2…). Affecte ensuite chaque élève depuis la liste, puis choisis le groupe dans l'emploi du temps.</p>
+    ${groups.map((g, i) => html`<div class="row" key=${g}><input class="inp" style="width:140px" defaultValue=${g} onBlur=${e => rename(i, e.target.value)} aria-label="Nom du groupe" />
+      <span class="muted">${studs.filter(s => s.group === g).length} élève(s)</span><span class="grow"></span><button class="btn small danger" onClick=${() => remove(i)}>Supprimer</button></div>`)}
+    <div class="row"><button class="btn" onClick=${add}>＋ Ajouter un groupe</button>
+      <button class="btn" onClick=${split} disabled=${groups.length < 2}>⚖ Répartir par ordre alphabétique</button>
+      <button class="btn ghost" onClick=${clearAll} disabled=${!groups.length}>Retirer tout le monde des groupes</button></div><//>`;
 }

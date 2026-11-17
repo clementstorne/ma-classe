@@ -122,6 +122,9 @@ export async function resetAll() {
 /* ---- Accès ---- */
 export const classById = (d, id) => d.classes.find(c => c.id === id);
 export const studentsOf = (d, classId) => d.students.filter(s => s.classId === classId).sort(byName);
+export const groupsOf = cls => (cls && cls.groups) || [];
+/** Élèves concernés par une séance : toute la classe, ou un groupe. */
+export const groupStudents = (d, classId, group) => studentsOf(d, classId).filter(s => !group || s.group === group);
 export const etabOf = (d, cls) => d.etabs.find(e => e.id === (cls && cls.etabId)) || d.etabs[0];
 export const roomById = (d, id) => d.rooms.find(r => r.id === id);
 export const planKey = (classId, roomId) => `${classId}|${roomId}`;
@@ -148,6 +151,6 @@ export function occurrence(d, slotId, date) {
   if (!s) return null;
   const o = (d.overrides || {})[`${slotId}|${date}`] || {};
   return { ...s, ...o, slotId, date, cancelled: !!o.cancelled, oneOff: !!s.date,
-    modified: ['start', 'end', 'classId', 'roomId'].some(k => o[k] !== undefined && o[k] !== s[k]) };
+    modified: ['start', 'end', 'classId', 'roomId', 'group'].some(k => o[k] !== undefined && o[k] !== s[k]) };
 }
 export const sessionKey = (classId, date, slotId) => `${classId}|${date}|${slotId || 'x'}`;
