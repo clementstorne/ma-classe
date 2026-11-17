@@ -1,5 +1,5 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, studentsOf, photoOf, getPlan, planKey, ROOM_W, ROOM_H, SEAT_W, SEAT_H } from '../store.js';
+import { useStore, mutate, classById, roomById, studentsOf, photoOf, roomsFor, roomH, getPlan, planKey, ROOM_W, ROOM_H, SEAT_W, SEAT_H } from '../store.js';
 import { Modal, Field, Avatar, Empty, toast } from './common.js';
 import { uid, displayName, initials, seatLabels } from '../util.js';
 import { go } from '../router.js';
@@ -44,6 +44,7 @@ export function unplace(plan, sid) { for (const k of Object.keys(plan.seatMap)) 
 /* ---------- Canevas ---------- */
 /** mode: 'place' | 'view' | 'template' */
 export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onSeatDrop, onItemChange, seatClass, seatExtra, labels }) {
+  const RH = roomH(room), bg = photoOf('bg-' + room.id);
   const lab = labels || seatLabels(Object.values(byId));
   const wrap = useRef();
   const [scale, setScale] = useState(0.8);
@@ -72,7 +73,7 @@ export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onS
         if (!moved && Math.hypot(dx, dy) < 4) return;
         moved = true;
         const nx = Math.max(0, Math.min(ROOM_W - it.w, Math.round((ox + dx) / 10) * 10));
-        const ny = Math.max(0, Math.min(ROOM_H - it.h, Math.round((oy + dy) / 10) * 10));
+        const ny = Math.max(0, Math.min(RH - it.h, Math.round((oy + dy) / 10) * 10));
         onItemChange(it.id, { x: nx, y: ny });
       };
       const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); if (!moved) onSeatTap && onSeatTap(it); };
@@ -85,8 +86,8 @@ export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onS
     startDrag(e, { label: lab[sid] || displayName(byId[sid]), onTap: () => onSeatTap && onSeatTap(it), onDrop: t => onSeatDrop && onSeatDrop(sid, t) });
   }
 
-  return html`<div class="plan-wrap" ref=${wrap} style=${{ height: ROOM_H * scale + 'px' }}>
-    <div class="plan-room" style=${{ width: ROOM_W + 'px', height: ROOM_H + 'px', transform: `scale(${scale})` }}>
+  return html`<div class="plan-wrap" ref=${wrap} style=${{ height: RH * scale + 'px' }}>
+    <div class=${'plan-room' + (bg ? ' hasbg' : '')} style=${{ width: ROOM_W + 'px', height: RH + 'px', transform: `scale(${scale})`, ...(bg ? { backgroundImage: `url(${bg})`, backgroundSize: '100% 100%' } : {}) }}>
       ${room.items.map(it => {
         const s = it.kind === 'seat' ? byId[seatMap[it.id]] : null;
         const cls = ['seat', it.kind === 'label' ? 'label' : '', it.kind === 'seat' && !s && mode !== 'template' ? 'empty' : '', mode === 'template' ? 'tpl' : '',
@@ -143,7 +144,22 @@ export function PlanPage({ classId, roomId }) {
   const addSeat = () => edit((p, r) => { r.items.push({ id: uid(), kind: 'seat', x: 500, y: 300, w: SEAT_W, h: SEAT_H }); });
   const addLabel = () => { const t = prompt('Texte du repère (ex. Tableau, Bureau, Porte, Fenêtre)', 'Bureau'); if (t) edit((p, r) => r.items.push({ id: uid(), kind: 'label', x: 500, y: 20, w: 240, h: 44, text: t })); };
   const delSel = () => { if (!selSeat) return; edit((p, r) => { r.items = r.items.filter(i => i.id !== selSeat); delete p.seatMap[selSeat]; }); setSelSeat(null); };
-  const dupSel = () => { if (!selSeat) return; edit((p, r) => { const i = r.items.find(x => x.id === selSeat); if (i) r.items.push({ ...i, id: uid(), x: Math.min(ROOM_W - i.w, i.x + 20), y: Math.min(ROOM_H - i.h, i.y + 20) }); }); };
+  async function seatsOnChairs() {
+    const n = room.items.filter(i => i.kind === 'seat').length;
+    if (n && !confirm(`Remplacer les ${n} places actuelles par une place sur chaque chaise du plan ? Les élèves déjà placés dans cette salle seront retirés des plans de toutes les classes.`)) return;
+    const pts = await detectChairs(photoOf('bg-' + roomId), ROOM_W, roomH(room));
+    if (!pts.length) return toast('Aucune chaise (orange) détectée sur l\'image.');
+    mutate(dd => {
+      const r = dd.rooms.find(x => x.id === roomId);
+      r.items = r.items.filter(i => i.kind !== 'seat' && !(i.kind === 'label' && /^tableau$/i.test(i.text)));
+      const cw = 82, ch = 88; // plus compactes que les places standard pour laisser voir les tables du fond
+      pts.forEach(([cx, cy]) => r.items.push({ id: uid(), kind: 'seat', x: Math.max(0, Math.min(ROOM_W - cw, Math.round(cx - cw / 2))), y: Math.max(0, Math.min(roomH(r) - ch, Math.round(cy - 12))), w: cw, h: ch }));
+      for (const k of Object.keys(dd.plans)) if (k.endsWith('|' + roomId)) dd.plans[k].seatMap = {};
+    });
+    setSelSeat(null);
+    toast(`${pts.length} places créées sur les chaises.`);
+  }
+  const dupSel = () => { if (!selSeat) return; edit((p, r) => { const i = r.items.find(x => x.id === selSeat); if (i) r.items.push({ ...i, id: uid(), x: Math.min(ROOM_W - i.w, i.x + 20), y: Math.min(roomH(r) - i.h, i.y + 20) }); }); };
   const editLabel = () => { const it = room.items.find(i => i.id === selSeat); if (!it || it.kind !== 'label') return; const t = prompt('Texte du repère', it.text); if (t) itemChange(it.id, { text: t }); };
   const clearRoom = () => { if (confirm('Supprimer tous les éléments de cette salle ? Les plans de toutes les classes seront vidés.')) { mutate(dd => { dd.rooms.find(r => r.id === roomId).items = []; for (const k of Object.keys(dd.plans)) if (k.endsWith('|' + roomId)) dd.plans[k].seatMap = {}; }); setSelSeat(null); } };
   const clearPlan = () => { if (confirm('Retirer tous les élèves du plan ?')) edit(p => { p.seatMap = {}; }); };
@@ -153,14 +169,14 @@ export function PlanPage({ classId, roomId }) {
     <div class="page-head">
       <a class="btn" href=${'#/class/' + classId + '/plans'}>‹ ${cls.name}</a>
       <h1>Plan de classe</h1>
-      <select class="inp" style="width:auto" value=${roomId} onChange=${e => go(`/plan/${classId}/${e.target.value}`)}>${d.rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
+      <select class="inp" style="width:auto" value=${roomId} onChange=${e => go(`/plan/${classId}/${e.target.value}`)}>${[...roomsFor(d, cls), ...(roomsFor(d, cls).some(r => r.id === roomId) ? [] : [room])].map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
       <span class="grow"></span>
       <div class="seg"><button class=${mode === 'place' ? 'on P' : ''} onClick=${() => { setMode('place'); setSelSeat(null); }}>Placement</button>
         <button class=${mode === 'template' ? 'on P' : ''} onClick=${() => { setMode('template'); setSelSeat(null); setSelStu(null); }}>Modèle de la salle</button></div>
     </div>
     ${mode === 'template' ? html`<div class="row" style="margin-bottom:10px">
         <button class="btn small" onClick=${addSeat}>＋ Table</button><button class="btn small" onClick=${() => setGen(true)}>▦ Générer une grille</button>
-        <button class="btn small" onClick=${addLabel}>＋ Repère (tableau, bureau…)</button><span class="grow"></span>
+        <button class="btn small" onClick=${addLabel}>＋ Repère (tableau, bureau…)</button>${photoOf('bg-' + roomId) ? html`<button class="btn small" onClick=${seatsOnChairs}>🪑 Placer sur les chaises du fond</button>` : null}<span class="grow"></span>
         ${selItem ? html`${selItem.kind === 'label' ? html`<button class="btn small" onClick=${editLabel}>Renommer</button>` : null}
           <button class="btn small" onClick=${dupSel}>Dupliquer</button><button class="btn small danger" onClick=${delSel}>Supprimer</button>` : html`<span class="hint">Glisse les éléments pour les placer ; touche-en un pour le sélectionner.</span>`}
         <button class="btn small danger" onClick=${clearRoom}>Tout effacer</button></div>
@@ -196,4 +212,29 @@ function GridGen({ onClose, onGen }) {
     <div class="row"><${Field} label="Rangées">${num(rows, setRows, 8)}<//><${Field} label="Colonnes">${num(cols, setCols, 10)}<//>
     <${Field} label="Tables par îlot (écart entre les îlots)">${num(group, setGroup, 10)}<//></div>
     <p class="hint">Les tables sont ajoutées au modèle actuel ; utilise « Tout effacer » avant pour repartir de zéro.</p><//>`;
+}
+
+/** Repère les chaises (aplats orange du plan) et renvoie leurs centres en coordonnées de salle. */
+export async function detectChairs(url, W, H) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+  const w = W, h = Math.round(W * img.height / img.width);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+  const hit = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
+    if (Math.abs(r - 204) + Math.abs(g - 141) + Math.abs(b - 89) < 40) hit[i] = 1;
+  }
+  const out = [];
+  for (let s = 0; s < w * h; s++) {
+    if (!hit[s]) continue;
+    let sx = 0, sy = 0, n = 0; const st = [s]; hit[s] = 0;
+    while (st.length) {
+      const p = st.pop(), x = p % w, y = (p - x) / w; sx += x; sy += y; n++;
+      for (const q of [p - 1, p + 1, p - w, p + w]) if (q >= 0 && q < w * h && hit[q] && Math.abs((q % w) - x) <= 1) { hit[q] = 0; st.push(q); }
+    }
+    if (n >= 150 && n <= 4000) out.push([sx / n, sy / n]);
+  }
+  return out.sort((a, b) => Math.round(a[1] / 40) - Math.round(b[1] / 40) || a[0] - b[0]);
 }

@@ -1,7 +1,7 @@
 import { html, useState, useRef } from '../../vendor/preact-htm.js';
-import { useStore, mutate, weekLetter, buildBackup, restoreBackup, markBackedUp, resetAll, defaultPeriods, defaultRoomSeats, S } from '../store.js';
+import { useStore, mutate, weekLetter, buildBackup, restoreBackup, setPhoto, removePhoto, photoOf, ROOM_W, ROOM_H, markBackedUp, resetAll, defaultPeriods, defaultRoomSeats, S } from '../store.js';
 import { Modal, Field, toast } from './common.js';
-import { uid, shareOrDownload, todayISO, addDays, iso, mondayOf, fmtDateFull } from '../util.js';
+import { uid, resizeImage, imageSize, shareOrDownload, todayISO, addDays, iso, mondayOf, fmtDateFull } from '../util.js';
 import { go } from '../router.js';
 
 export function Settings() {
@@ -47,9 +47,13 @@ export function Settings() {
     <${Holidays} />
 
     <h3 style="margin:18px 0 8px">Salles</h3>
-    <div class="list">${d.rooms.map(r => html`<div class="item" key=${r.id} style="cursor:default"><input class="inp" style="flex:1" value=${r.name} onInput=${v => mutate(dd => { dd.rooms.find(x => x.id === r.id).name = v.target.value; })} />
-      <span class="muted small">${r.items.filter(i => i.kind === 'seat').length} places</span>
-      <button class="btn small danger" onClick=${() => { if (confirm(`Supprimer la salle « ${r.name} » ?`)) mutate(dd => { dd.rooms = dd.rooms.filter(x => x.id !== r.id); dd.slots.forEach(s => { if (s.roomId === r.id) s.roomId = ''; }); for (const k of Object.keys(dd.plans)) if (k.endsWith('|' + r.id)) delete dd.plans[k]; }); }}>Supprimer</button></div>`)}</div>
+    <p class="hint" style="margin:0 0 8px">Rattache chaque salle à un établissement : seules les salles de l'établissement d'une classe sont proposées pour son emploi du temps et son plan. Tu peux aussi charger l'image du plan de la salle comme fond du plan de classe.</p>
+    <div class="list">${d.rooms.map(r => html`<div class="item col" key=${r.id} style="cursor:default;align-items:stretch">
+      <div class="row"><input class="inp" style="flex:1;min-width:140px" value=${r.name} onInput=${v => mutate(dd => { dd.rooms.find(x => x.id === r.id).name = v.target.value; })} />
+        <select class="inp" style="width:auto" value=${r.etabId || ''} onChange=${e => mutate(dd => { dd.rooms.find(x => x.id === r.id).etabId = e.target.value; })}><option value="">Tous les établissements</option>${d.etabs.map(e => html`<option value=${e.id}>${e.name}</option>`)}</select></div>
+      <div class="row"><span class="muted small">${r.items.filter(i => i.kind === 'seat').length} places</span><span class="grow"></span>
+        <${RoomBg} room=${r} />
+        <button class="btn small danger" onClick=${() => { if (confirm(`Supprimer la salle « ${r.name} » ?`)) { removePhoto('bg-' + r.id); mutate(dd => { dd.rooms = dd.rooms.filter(x => x.id !== r.id); dd.slots.forEach(s => { if (s.roomId === r.id) s.roomId = ''; }); for (const k of Object.keys(dd.plans)) if (k.endsWith('|' + r.id)) delete dd.plans[k]; }); } }}>Supprimer</button></div></div>`)}</div>
     <div style="margin-top:8px"><button class="btn small" onClick=${() => mutate(dd => dd.rooms.push({ id: uid(), name: 'Salle ' + (dd.rooms.length + 1), items: defaultRoomSeats() }))}>＋ Ajouter une salle</button></div>
     <p class="hint">Le modèle de chaque salle (tables, tableau, bureau) se règle depuis le plan d'une classe, onglet « Modèle de la salle ».</p>
 
@@ -142,3 +146,26 @@ function Holidays() {
       <button class="btn small danger" onClick=${() => mutate(dd => { dd.holidays = dd.holidays.filter(x => x.id !== h.id); })}>Supprimer</button></div>`)}</div>` : html`<p class="muted" style="margin:0">Aucune date saisie.</p>`}</div>`;
 }
 const fromISOs = s => fmtDateFull(s);
+
+function RoomBg({ room }) {
+  const f = useRef();
+  const has = !!photoOf('bg-' + room.id);
+  async function pick(e) {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await resizeImage(file, 1400, 'image/png');
+      const { w, h } = await imageSize(url);
+      await setPhoto('bg-' + room.id, url);
+      mutate(dd => { dd.rooms.find(x => x.id === room.id).h = Math.round(ROOM_W * h / w); });
+      toast('Image de fond enregistrée. Dans le plan, « Modèle de la salle » → « Placer sur les chaises ».');
+    } catch (err) { toast('Image illisible.'); }
+  }
+  async function del() {
+    await removePhoto('bg-' + room.id);
+    mutate(dd => { const r = dd.rooms.find(x => x.id === room.id); delete r.h; r.items.forEach(i => { i.y = Math.min(i.y, ROOM_H - i.h); }); });
+  }
+  return html`<input type="file" accept="image/*" hidden ref=${f} onChange=${pick} />
+    <button class="btn small" onClick=${() => f.current.click()}>${has ? '🖼 Changer le fond' : '🖼 Image de fond'}</button>
+    ${has ? html`<button class="btn small" onClick=${del}>Retirer le fond</button>` : null}`;
+}

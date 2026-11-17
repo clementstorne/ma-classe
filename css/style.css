@@ -214,3 +214,7 @@ input.inp.bad{border-color:var(--ko);background:var(--ko-soft)}
 
 .week .dh small.hol{color:var(--warn);font-weight:600;font-size:11px;line-height:1.2}
 .week .dc.off{background:repeating-linear-gradient(135deg,transparent 0 8px,color-mix(in srgb,var(--muted) 12%,transparent) 8px 16px)}
+
+.plan-room.hasbg{background-repeat:no-repeat}
+.plan-room.hasbg .seat.empty{background:rgba(255,255,255,.6)}
+.plan-room.hasbg .seat.label{background:rgba(255,255,255,.8)}

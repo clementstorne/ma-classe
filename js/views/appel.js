@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, groupStudents, studentsOf, sessionKey, roomById, getPlan, occurrence } from '../store.js';
+import { useStore, mutate, classById, groupStudents, studentsOf, roomsFor, sessionKey, roomById, getPlan, occurrence } from '../store.js';
 import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
@@ -13,7 +13,7 @@ export function Appel({ classId, date, slotId }) {
   const [pop, setPop] = useState(null);   // élève dont on ouvre les actions (mode plan)
   const [fiche, setFiche] = useState(null);
   const slot = slotId !== 'x' ? occurrence(d, slotId, date) : null;
-  const [roomId, setRoomId] = useState((slot && slot.roomId) || (d.rooms[0] && d.rooms[0].id));
+  const [roomId, setRoomId] = useState((slot && slot.roomId) || ((roomsFor(d, classById(d, classId))[0] || {}).id));
   if (!cls) return html`<${Empty} title="Classe introuvable" />`;
   const key = sessionKey(classId, date, slotId === 'x' ? null : slotId);
   const studs = groupStudents(d, classId, slot && slot.group);
@@ -61,7 +61,7 @@ export function Appel({ classId, date, slotId }) {
     ${!studs.length ? html`<${Empty} title=${slot && slot.group ? 'Aucun élève dans le groupe ' + slot.group : 'Aucun élève dans cette classe'}><p>Affecte les élèves à un groupe depuis le dossier de la classe (onglet Élèves).</p><//>` : null}
     ${view === 'list' ? html`<div class="appel-grid">${studs.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>
         <${Avatar} s=${s} size=${48} /><div class="who" onClick=${() => setFiche(s.id)}><b>${s.nom}</b><span>${s.prenom}${s.amenagement ? html` <span style="color:var(--warn)">★</span>` : ''}</span></div>${controls(s)}</div>`)}</div>`
-      : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${d.rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
+      : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${roomsFor(d, cls).map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
           <span class="hint">Touche un élève pour ouvrir ses actions.</span></div>
         ${room ? html`<${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} labels=${seatLabels(studentsOf(d, classId))} mode="view" onSeatTap=${it => { const sid = plan.seatMap[it.id]; if (sid) setPop(sid); }}
           seatClass=${s => statusOf(s.id) === 'P' ? '' : statusOf(s.id)}

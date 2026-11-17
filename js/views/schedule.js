@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf, sortedClasses, holidayOn } from '../store.js';
+import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf, sortedClasses, holidayOn, roomsFor } from '../store.js';
 import { mondayOf, addDays, iso, fromISO, toMin, fromMin, DAYS, uid, classColor, textOn, todayISO, fmtDateLong } from '../util.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { go } from '../router.js';
@@ -47,7 +47,7 @@ export function Schedule() {
 
   /* ---------- formulaires ---------- */
   const firstClass = sortedClasses(d)[0] ? sortedClasses(d)[0].id : '';
-  const firstRoom = d.rooms[0] ? d.rooms[0].id : '';
+  const firstRoom = '';
   function newForm(date, start, kind) {
     const s = start || '08:00';
     setForm({ mode: 'new', kind: kind || 'recurring', date, day: dayIdx(date), start: s, end: fromMin(toMin(s) + 55), classId: firstClass, roomId: firstRoom, week: '', group: '' });
@@ -176,7 +176,7 @@ export function Schedule() {
       ${recurringEdit ? html`<p style="margin:0"><b>${fmtDateLong(f.date)}</b>${f.cancelled ? html` <span class="chip" style="background:var(--ko-soft);color:var(--ko)">annulée</span>` : ''}</p>
         <div class="seg"><button class=${f.scope === 'once' ? 'on P' : ''} onClick=${() => setScope('once')}>Cette séance seulement</button>
         <button class=${f.scope === 'all' ? 'on P' : ''} onClick=${() => setScope('all')}>Toutes les semaines</button></div>` : null}
-      <${Field} label="Classe"><select value=${f.classId} onChange=${e => setForm({ ...f, classId: e.target.value, group: groupsOf(classById(d, e.target.value)).includes(f.group) ? f.group : '' })}>${sortedClasses(d).map(c => html`<option value=${c.id}>${c.name}</option>`)}</select><//>
+      <${Field} label="Classe"><select value=${f.classId} onChange=${e => setForm({ ...f, classId: e.target.value, group: groupsOf(classById(d, e.target.value)).includes(f.group) ? f.group : '', roomId: roomsFor(d, classById(d, e.target.value)).some(r => r.id === f.roomId) ? f.roomId : '' })}>${sortedClasses(d).map(c => html`<option value=${c.id}>${c.name}</option>`)}</select><//>
       ${groupsOf(classById(d, f.classId)).length ? html`<${Field} label="Cours en groupe ?"><select value=${f.group || ''} onChange=${e => setForm({ ...f, group: e.target.value })}>
         <option value="">Non — classe entière</option>${groupsOf(classById(d, f.classId)).map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select><//>` : null}
       ${f.kind === 'oneoff' ? html`<${Field} label="Date"><input type="date" value=${f.date} onInput=${e => e.target.value && setForm({ ...f, date: e.target.value })} /><//>`
@@ -184,7 +184,7 @@ export function Schedule() {
         : showWeekDay ? html`<${Field} label="Jour"><select value=${f.day} onChange=${e => setForm({ ...f, day: Number(e.target.value) })}>${DAYS.map((n, i) => html`<option value=${i}>${n}</option>`)}</select><//>` : null}
       <div class="row"><${Field} label="Début"><input type="time" value=${f.start} onInput=${e => setForm({ ...f, start: e.target.value })} /><//>
         <${Field} label="Fin"><input type="time" value=${f.end} onInput=${e => setForm({ ...f, end: e.target.value })} /><//></div>
-      <${Field} label="Salle"><select value=${f.roomId} onChange=${e => setForm({ ...f, roomId: e.target.value })}><option value="">—</option>${d.rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select><//>
+      <${Field} label="Salle"><select value=${f.roomId} onChange=${e => setForm({ ...f, roomId: e.target.value })}><option value="">—</option>${roomsFor(d, classById(d, f.classId)).map(r => html`<option value=${r.id}>${r.name}</option>`)}</select><//>
       ${abEtabs.length && f.kind === 'recurring' && showWeekDay ? html`<${Field} label="Semaine"><select value=${f.week || ''} onChange=${e => setForm({ ...f, week: e.target.value })}>
         <option value="">Toutes les semaines</option><option value="A">Semaines A seulement</option><option value="B">Semaines B seulement</option></select><//>` : null}
       ${recurringEdit ? html`<div class="row"><button class=${'btn' + (f.cancelled ? '' : ' danger')} onClick=${() => cancelOcc(!f.cancelled)}>${f.cancelled ? '↺ Rétablir cette séance' : '✕ Annuler cette séance (pas de cours ce jour-là)'}</button></div>` : null}

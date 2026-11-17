@@ -87,7 +87,7 @@ export function readAsDataURL(file) {
 }
 
 /** Redimensionne une image (côté max 320 px) et renvoie un dataURL JPEG. */
-export async function resizeImage(file, max = 320) {
+export async function resizeImage(file, max = 320, type = 'image/jpeg') {
   const url = await readAsDataURL(file);
   const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
   const k = Math.min(1, max / Math.max(img.width, img.height));
@@ -95,8 +95,9 @@ export async function resizeImage(file, max = 320) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   c.getContext('2d').drawImage(img, 0, 0, w, h);
-  return c.toDataURL('image/jpeg', 0.82);
+  return c.toDataURL(type, 0.9);
 }
+export const imageSize = url => new Promise((res, rej) => { const i = new Image(); i.onload = () => res({ w: i.width, h: i.height }); i.onerror = rej; i.src = url; });
 
 let xlsxPromise;
 export function loadXLSX() {

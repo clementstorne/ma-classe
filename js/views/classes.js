@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, sortedClasses, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
+import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
@@ -156,12 +156,13 @@ function NotesList({ cls, studs, onImport }) {
 
 function PlansList({ cls }) {
   const d = useStore();
-  return html`<div class="list">${d.rooms.map(r => {
+  const rooms = roomsFor(d, cls);
+  return html`<div class="list">${rooms.map(r => {
     const p = getPlan(d, cls.id, r.id);
     const n = Object.values(p.seatMap).filter(sid => d.students.some(s => s.id === sid)).length;
     return html`<div class="item" key=${r.id} onClick=${() => go(`/plan/${cls.id}/${r.id}`)}><div class="grow"><b>${r.name}</b>
       <div class="muted small">${r.items.filter(i => i.kind === 'seat').length} places · ${n} élève(s) placé(s)</div></div><span class="muted">›</span></div>`;
-  })}</div><p class="hint">Les salles se gèrent dans les réglages.</p>`;
+  })}</div><p class="hint">Seules les salles de l'établissement de la classe sont listées. Elles se gèrent dans les réglages.</p>`;
 }
 
 /* ---------- Liste des élèves avec groupes ---------- */

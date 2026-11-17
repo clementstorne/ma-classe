@@ -136,6 +136,9 @@ export const groupsOf = cls => (cls && cls.groups) || [];
 /** Élèves concernés par une séance : toute la classe, ou un groupe. */
 export const groupStudents = (d, classId, group) => studentsOf(d, classId).filter(s => !group || s.group === group);
 export const etabOf = (d, cls) => d.etabs.find(e => e.id === (cls && cls.etabId)) || d.etabs[0];
+/** Salles utilisables pour une classe : celles de son établissement + celles non rattachées. */
+export const roomsFor = (d, cls) => d.rooms.filter(r => !r.etabId || !cls || r.etabId === cls.etabId);
+export const roomH = r => (r && r.h) || ROOM_H;
 export const roomById = (d, id) => d.rooms.find(r => r.id === id);
 export const planKey = (classId, roomId) => `${classId}|${roomId}`;
 export function getPlan(d, classId, roomId) { return d.plans[planKey(classId, roomId)] || { seatMap: {} }; }
