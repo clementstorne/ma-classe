@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, studentsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById } from '../store.js';
+import { useStore, mutate, classById, studentsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
@@ -48,7 +48,7 @@ export function ClassFolder({ id, tab, q }) {
   const [addStu, setAddStu] = useState(null);
   if (!cls) return html`<${Empty} title="Classe introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
   const studs = studentsOf(d, id);
-  const slot = q.slot && d.slots.find(s => s.id === q.slot);
+  const slot = q.slot && q.date ? occurrence(d, q.slot, q.date) : null;
   const T = (k, label) => html`<a class=${tab === k ? 'on' : ''} href=${'#/class/' + id + '/' + k + (q.date ? `?date=${q.date}&slot=${q.slot || ''}` : '')}>${label}</a>`;
   const room = slot && roomById(d, slot.roomId);
   const apLink = (date, slotId) => `/appel/${id}/${date}/${slotId || 'x'}`;

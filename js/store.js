@@ -63,7 +63,7 @@ export function defaultData() {
       { id: 'e2', name: 'Collège Le Segrais', type: 'trimestre', periods: defaultPeriods('trimestre') }],
     classes: [], students: [],
     rooms: [{ id: 'r1', name: 'Salle 1', items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', items: defaultRoomSeats() }],
-    plans: {}, slots: [], sessions: {}, events: [], evals: [],
+    plans: {}, slots: [], overrides: {}, sessions: {}, events: [], evals: [],
   };
 }
 
@@ -141,5 +141,13 @@ export function weekLetter(etab, monday) {
   const ref = new Date(y, m - 1, d);
   const diff = Math.round((monday - ref) / 604800000);
   return ((diff % 2) + 2) % 2 === 0 ? 'A' : 'B';
+}
+/** Séance réelle d'un créneau à une date : créneau de base + éventuelle modification ponctuelle. */
+export function occurrence(d, slotId, date) {
+  const s = d.slots.find(x => x.id === slotId);
+  if (!s) return null;
+  const o = (d.overrides || {})[`${slotId}|${date}`] || {};
+  return { ...s, ...o, slotId, date, cancelled: !!o.cancelled, oneOff: !!s.date,
+    modified: ['start', 'end', 'classId', 'roomId'].some(k => o[k] !== undefined && o[k] !== s[k]) };
 }
 export const sessionKey = (classId, date, slotId) => `${classId}|${date}|${slotId || 'x'}`;

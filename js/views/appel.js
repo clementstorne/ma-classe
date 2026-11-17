@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, studentsOf, sessionKey, roomById, getPlan } from '../store.js';
+import { useStore, mutate, classById, studentsOf, sessionKey, roomById, getPlan, occurrence } from '../store.js';
 import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
@@ -12,7 +12,7 @@ export function Appel({ classId, date, slotId }) {
   const [view, setView] = useState('list');
   const [pop, setPop] = useState(null);   // élève dont on ouvre les actions (mode plan)
   const [fiche, setFiche] = useState(null);
-  const slot = slotId !== 'x' ? d.slots.find(s => s.id === slotId) : null;
+  const slot = slotId !== 'x' ? occurrence(d, slotId, date) : null;
   const [roomId, setRoomId] = useState((slot && slot.roomId) || (d.rooms[0] && d.rooms[0].id));
   if (!cls) return html`<${Empty} title="Classe introuvable" />`;
   const key = sessionKey(classId, date, slotId === 'x' ? null : slotId);
