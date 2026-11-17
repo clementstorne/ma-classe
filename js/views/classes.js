@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
+import { useStore, mutate, sortedClasses, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
@@ -24,7 +24,7 @@ export function ClassList() {
     ${!d.classes.length ? html`<${Empty} title="Aucune classe">
       <p>Crée une classe puis importe ses élèves (CSV / Excel / copier-coller).</p><//>` : null}
     ${d.etabs.map(e => {
-      const cs = d.classes.filter(c => c.etabId === e.id);
+      const cs = sortedClasses(d).filter(c => c.etabId === e.id);
       if (!cs.length) return null;
       return html`<h3 style="margin:16px 0 8px">${e.name}</h3><div class="cards">${cs.map(c => html`
         <a class="card class-card" href=${'#/class/' + c.id + '/eleves'} style=${{ '--c': classColor(c) }}>
@@ -77,14 +77,14 @@ export function ClassFolder({ id, tab, q }) {
       <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>⚙ Classe</button></div>
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
         <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${slot && slot.group ? ' · groupe ' + slot.group : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
-      <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel'}</button>
+      <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
       ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id}>Plan de classe</a>` : null}</div>`
       : html`<div class="row" style="margin-bottom:12px"><button class="btn" onClick=${() => go(apLink(todayISO(), null))}>Faire l'appel aujourd'hui (hors créneau)</button></div>`}
     <div class="tabs">${T('eleves', 'Élèves')}${T('suivi', 'Suivi')}${T('notes', 'Notes')}${T('plans', 'Plans de classe')}</div>
-    ${tab === 'suivi' ? html`<${Suivi} cls=${cls} studs=${studs} onOpen=${setSheet} />`
+    ${tab === 'suivi' ? html`<${Suivi} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onOpen=${setSheet} />`
       : tab === 'notes' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
       : tab === 'plans' ? html`<${PlansList} cls=${cls} />`
-      : html`<${Roster} cls=${cls} studs=${studs} onSheet=${setSheet} onImport=${() => setImp(true)} onAdd=${() => setAddStu({ nom: '', prenom: '' })} onPhotos=${() => setPhotos(true)} />`}
+      : html`<${Roster} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onSheet=${setSheet} onImport=${() => setImp(true)} onAdd=${() => setAddStu({ nom: '', prenom: '' })} onPhotos=${() => setPhotos(true)} />`}
     ${sheet ? html`<${StudentSheet} sid=${sheet} onClose=${() => setSheet(null)} />` : null}
     ${imp ? html`<${RosterImport} classId=${id} onClose=${() => setImp(false)} />` : null}
     ${photos ? html`<${PhotoBatch} classId=${id} onClose=${() => setPhotos(false)} />` : null}
@@ -100,13 +100,13 @@ export function ClassFolder({ id, tab, q }) {
   </div>`;
 }
 
-function Suivi({ cls, studs, onOpen }) {
+function Suivi({ cls, studs, onOpen, initial }) {
   const d = useStore();
   const etab = etabOf(d, cls);
   const cur = currentPeriod(etab);
   const [per, setPer] = useState(cur ? cur.id : 'all');
   const [sort, setSort] = useState('nom');
-  const [grp, setGrp] = useState('');
+  const [grp, setGrp] = useState(initial || '');
   const groups = groupsOf(cls);
   const all = studs;
   studs = grp ? studs.filter(s => s.group === grp) : studs;
@@ -165,8 +165,8 @@ function PlansList({ cls }) {
 }
 
 /* ---------- Liste des élèves avec groupes ---------- */
-function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos }) {
-  const [flt, setFlt] = useState('');
+function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos, initial }) {
+  const [flt, setFlt] = useState(initial || '');
   const [gm, setGm] = useState(false);
   const groups = groupsOf(cls);
   const list = flt === '' ? studs : flt === '-' ? studs.filter(s => !s.group) : studs.filter(s => s.group === flt);

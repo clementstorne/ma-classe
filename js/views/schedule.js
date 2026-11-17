@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf } from '../store.js';
+import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf, sortedClasses, holidayOn } from '../store.js';
 import { mondayOf, addDays, iso, fromISO, toMin, fromMin, DAYS, uid, classColor, textOn, todayISO, fmtDateLong } from '../util.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { go } from '../router.js';
@@ -24,6 +24,7 @@ export function Schedule() {
       if (s.day !== dayIdx(date)) continue;
       const L = letterOfClass(s.classId);
       if (s.week && L && s.week !== L) continue;
+      if (holidayOn(d, date, (classById(d, s.classId) || {}).etabId)) continue;
       out.push(occurrence(d, s.id, date));
     }
     return out.sort((a, b) => toMin(a.start) - toMin(b.start));
@@ -45,7 +46,7 @@ export function Schedule() {
   const colorOf = cid => { const c = classById(d, cid); return c ? classColor(c) : '#888'; };
 
   /* ---------- formulaires ---------- */
-  const firstClass = d.classes[0] ? d.classes[0].id : '';
+  const firstClass = sortedClasses(d)[0] ? sortedClasses(d)[0].id : '';
   const firstRoom = d.rooms[0] ? d.rooms[0].id : '';
   function newForm(date, start, kind) {
     const s = start || '08:00';
@@ -147,9 +148,9 @@ export function Schedule() {
     ${!d.slots.length && !edit ? html`<p class="banner">Ton emploi du temps est vide. Touche <b>✎ Modifier</b> puis une zone de la grille pour ajouter un créneau (classe, salle, horaires).</p>` : null}
     <div class=${'week' + (edit ? ' edit' : '')} style=${{ '--nd': nd }}>
       <div class="dh"></div>
-      ${dates.map((date, i) => html`<div class=${'dh' + (date === today ? ' today' : '')}>${DAYS[i]}<small>${fromISO(date).getDate()}/${fromISO(date).getMonth() + 1}</small></div>`)}
+      ${dates.map((date, i) => { const hol = holidayOn(d, date); return html`<div class=${'dh' + (date === today ? ' today' : '')}>${DAYS[i]}<small>${fromISO(date).getDate()}/${fromISO(date).getMonth() + 1}</small>${hol ? html`<small class="hol">${hol.name}</small>` : null}</div>`; })}
       <div class="gut" style=${{ height: height + 'px' }}>${hours.map(m => html`<span style=${{ top: (m - gStart) * PPM + 'px' }}>${m / 60}h</span>`)}</div>
-      ${dates.map(date => html`<div class=${'dc' + (date === today ? ' today' : '')} style=${{ height: height + 'px' }} onClick=${e => clickColumn(e, date)}>
+      ${dates.map(date => html`<div class=${'dc' + (date === today ? ' today' : '') + (holidayOn(d, date) ? ' off' : '')} style=${{ height: height + 'px' }} onClick=${e => clickColumn(e, date)}>
         ${hours.map(m => html`<div class="hl" style=${{ top: (m - gStart) * PPM + 'px' }}></div>`)}
         ${date === today && nowMin >= gStart && nowMin <= gEnd ? html`<div class="now" style=${{ top: (nowMin - gStart) * PPM + 'px' }}></div>` : null}
         ${byDate[date].map(o => {
@@ -175,7 +176,7 @@ export function Schedule() {
       ${recurringEdit ? html`<p style="margin:0"><b>${fmtDateLong(f.date)}</b>${f.cancelled ? html` <span class="chip" style="background:var(--ko-soft);color:var(--ko)">annulée</span>` : ''}</p>
         <div class="seg"><button class=${f.scope === 'once' ? 'on P' : ''} onClick=${() => setScope('once')}>Cette séance seulement</button>
         <button class=${f.scope === 'all' ? 'on P' : ''} onClick=${() => setScope('all')}>Toutes les semaines</button></div>` : null}
-      <${Field} label="Classe"><select value=${f.classId} onChange=${e => setForm({ ...f, classId: e.target.value, group: groupsOf(classById(d, e.target.value)).includes(f.group) ? f.group : '' })}>${d.classes.map(c => html`<option value=${c.id}>${c.name}</option>`)}</select><//>
+      <${Field} label="Classe"><select value=${f.classId} onChange=${e => setForm({ ...f, classId: e.target.value, group: groupsOf(classById(d, e.target.value)).includes(f.group) ? f.group : '' })}>${sortedClasses(d).map(c => html`<option value=${c.id}>${c.name}</option>`)}</select><//>
       ${groupsOf(classById(d, f.classId)).length ? html`<${Field} label="Cours en groupe ?"><select value=${f.group || ''} onChange=${e => setForm({ ...f, group: e.target.value })}>
         <option value="">Non — classe entière</option>${groupsOf(classById(d, f.classId)).map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select><//>` : null}
       ${f.kind === 'oneoff' ? html`<${Field} label="Date"><input type="date" value=${f.date} onInput=${e => e.target.value && setForm({ ...f, date: e.target.value })} /><//>`

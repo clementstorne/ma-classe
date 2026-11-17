@@ -63,7 +63,7 @@ export function defaultData() {
       { id: 'e2', name: 'Collège Le Segrais', type: 'trimestre', periods: defaultPeriods('trimestre') }],
     classes: [], students: [],
     rooms: [{ id: 'r1', name: 'Salle 1', items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', items: defaultRoomSeats() }],
-    plans: {}, slots: [], overrides: {}, sessions: {}, events: [], evals: [],
+    plans: {}, slots: [], overrides: {}, holidays: [], sessions: {}, events: [], evals: [],
   };
 }
 
@@ -153,4 +153,8 @@ export function occurrence(d, slotId, date) {
   return { ...s, ...o, slotId, date, cancelled: !!o.cancelled, oneOff: !!s.date,
     modified: ['start', 'end', 'classId', 'roomId', 'group'].some(k => o[k] !== undefined && o[k] !== s[k]) };
 }
+/** Classes triées par ordre alphabétique (3A avant 4A, 4B avant 10A…). */
+export const sortedClasses = d => [...d.classes].sort((a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true, sensitivity: 'base' }));
+/** Vacances / jour férié couvrant une date (pour un établissement donné), ou undefined. */
+export const holidayOn = (d, date, etabId) => (d.holidays || []).find(h => h.start <= date && date <= (h.end || h.start) && (!h.etabId || !etabId || h.etabId === etabId));
 export const sessionKey = (classId, date, slotId) => `${classId}|${date}|${slotId || 'x'}`;
