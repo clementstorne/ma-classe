@@ -1,0 +1,78 @@
+import { html, useState } from '../../vendor/preact-htm.js';
+import { useStore, mutate, classById, studentsOf, sessionKey, roomById, getPlan } from '../store.js';
+import { Modal, Avatar, Empty } from './common.js';
+import { PlanCanvas } from './plan.js';
+import { StudentSheet } from './student.js';
+import { fmtDateLong, uid, displayName } from '../util.js';
+import { go } from '../router.js';
+
+export function Appel({ classId, date, slotId }) {
+  const d = useStore();
+  const cls = classById(d, classId);
+  const [view, setView] = useState('list');
+  const [pop, setPop] = useState(null);   // élève dont on ouvre les actions (mode plan)
+  const [fiche, setFiche] = useState(null);
+  const slot = slotId !== 'x' ? d.slots.find(s => s.id === slotId) : null;
+  const [roomId, setRoomId] = useState((slot && slot.roomId) || (d.rooms[0] && d.rooms[0].id));
+  if (!cls) return html`<${Empty} title="Classe introuvable" />`;
+  const key = sessionKey(classId, date, slotId === 'x' ? null : slotId);
+  const studs = studentsOf(d, classId);
+  const se = d.sessions[key];
+  const marks = se ? se.marks : {};
+  const ev = type => d.events.filter(e => e.sessionKey === key && e.type === type);
+  const has = (sid, type) => d.events.some(e => e.sessionKey === key && e.sid === sid && e.type === type);
+  const statusOf = sid => marks[sid] || 'P';
+
+  const ensure = dd => dd.sessions[key] ||= { key, classId, date, slotId: slotId === 'x' ? null : slotId, marks: {}, validated: false };
+  function setMark(sid, st) {
+    mutate(dd => { const s = ensure(dd); if (st === 'P') delete s.marks[sid]; else s.marks[sid] = st; s.validated = true; });
+  }
+  function toggle(sid, type) {
+    mutate(dd => {
+      const i = dd.events.findIndex(e => e.sessionKey === key && e.sid === sid && e.type === type);
+      if (i >= 0) dd.events.splice(i, 1);
+      else dd.events.push({ id: uid(), sid, classId, date, sessionKey: key, type });
+      ensure(dd);
+    });
+  }
+  const validate = () => mutate(dd => { ensure(dd).validated = true; });
+  const nA = studs.filter(s => statusOf(s.id) === 'A').length, nR = studs.filter(s => statusOf(s.id) === 'R').length;
+
+  const controls = s => html`<div class="ctl">
+    <div class="seg" role="group" aria-label="Présence">${['P', 'A', 'R'].map(st => html`<button class=${(statusOf(s.id) === st ? 'on ' : '') + st} onClick=${() => setMark(s.id, st)}
+      title=${{ P: 'Présent', A: 'Absent', R: 'En retard' }[st]}>${st}</button>`)}</div>
+    <button class=${'tg dev' + (has(s.id, 'devoir') ? ' on' : '')} title="Travail non fait" aria-label="Travail non fait" onClick=${() => toggle(s.id, 'devoir')}>📝</button>
+    <button class=${'tg mat' + (has(s.id, 'materiel') ? ' on' : '')} title="Oubli de matériel" aria-label="Oubli de matériel" onClick=${() => toggle(s.id, 'materiel')}>🎒</button></div>`;
+
+  const byId = Object.fromEntries(studs.map(s => [s.id, s]));
+  const room = roomById(d, roomId);
+  const plan = room ? getPlan(d, classId, roomId) : { seatMap: {} };
+  const placed = new Set(Object.values(plan.seatMap));
+  const unplaced = studs.filter(s => !placed.has(s.id));
+  const back = () => go(`/class/${classId}/eleves?date=${date}&slot=${slotId === 'x' ? '' : slotId}`);
+
+  return html`<div class="page">
+    <div class="page-head"><button class="btn ghost" onClick=${back}>‹ ${cls.name}</button><h1>Appel · ${cls.name}</h1>
+      <span class="sub">${fmtDateLong(date)}${slot ? ' · ' + slot.start + '–' + slot.end : ''}</span><span class="grow"></span>
+      <div class="seg"><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button><button class=${view === 'plan' ? 'on P' : ''} onClick=${() => setView('plan')}>Plan</button></div></div>
+    <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">Présents ${studs.length - nA - nR}</span><span class="counter a">Absents ${nA}</span><span class="counter r">Retards ${nR}</span>
+      <span class="counter">📝 ${ev('devoir').length}</span><span class="counter">🎒 ${ev('materiel').length}</span></div><span class="grow"></span>
+      ${se && se.validated ? html`<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Appel enregistré</span>` : html`<button class="btn primary" onClick=${validate}>✓ Tous présents / valider</button>`}</div>
+    ${!studs.length ? html`<${Empty} title="Aucun élève dans cette classe" />` : null}
+    ${view === 'list' ? html`<div class="appel-grid">${studs.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>
+        <${Avatar} s=${s} size=${48} /><div class="who" onClick=${() => setFiche(s.id)}><b>${s.nom}</b><span>${s.prenom}${s.amenagement ? html` <span style="color:var(--warn)">★</span>` : ''}</span></div>${controls(s)}</div>`)}</div>`
+      : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${d.rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
+          <span class="hint">Touche un élève pour ouvrir ses actions.</span></div>
+        ${room ? html`<${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} mode="view" onSeatTap=${it => { const sid = plan.seatMap[it.id]; if (sid) setPop(sid); }}
+          seatClass=${s => statusOf(s.id) === 'P' ? '' : statusOf(s.id)}
+          seatExtra=${s => html`<span class="badge">${has(s.id, 'devoir') ? '📝' : ''}${has(s.id, 'materiel') ? '🎒' : ''}</span>`} />` : null}
+        ${unplaced.length ? html`<h3 style="margin:14px 0 8px">Élèves non placés sur ce plan</h3><div class="appel-grid">${unplaced.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>
+          <${Avatar} s=${s} size=${40} /><div class="who"><b>${s.nom}</b><span>${s.prenom}</span></div>${controls(s)}</div>`)}</div>` : null}`}
+    ${pop && byId[pop] ? html`<${Modal} title=${displayName(byId[pop])} onClose=${() => setPop(null)}
+        foot=${html`<button class="btn" onClick=${() => { setFiche(pop); setPop(null); }}>Fiche élève</button><button class="btn primary" onClick=${() => setPop(null)}>OK</button>`}>
+      <div class="row" style="justify-content:center"><${Avatar} s=${byId[pop]} size=${72} /></div>
+      ${byId[pop].amenagement ? html`<p class="chip amen" style="white-space:normal">★ ${byId[pop].amenagement}</p>` : null}
+      <div style="display:flex;justify-content:center">${controls(byId[pop])}</div><//>` : null}
+    ${fiche ? html`<${StudentSheet} sid=${fiche} onClose=${() => setFiche(null)} />` : null}
+  </div>`;
+}
