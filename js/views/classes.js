@@ -2,6 +2,7 @@ import { html, useState } from '../../vendor/preact-htm.js';
 import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
+import { NotesTab } from './notes.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
 import { uid, CLASS_COLORS, classColor, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum } from '../util.js';
 import { suiviStats, evalAverage } from '../logic.js';
@@ -58,7 +59,7 @@ export function ClassFolder({ id, tab, q }) {
     if (edit.del) { if (!confirm(`Supprimer la classe ${cls.name} et toutes ses données (élèves, notes, appels) ?`)) return; mutate(dd => {
       const ids = new Set(dd.students.filter(s => s.classId === id).map(s => s.id));
       dd.classes = dd.classes.filter(c => c.id !== id); dd.students = dd.students.filter(s => s.classId !== id);
-      dd.slots = dd.slots.filter(s => s.classId !== id); dd.events = dd.events.filter(e => e.classId !== id); dd.evals = dd.evals.filter(e => e.classId !== id);
+      dd.slots = dd.slots.filter(s => s.classId !== id); dd.events = dd.events.filter(e => e.classId !== id); dd.evals = dd.evals.filter(e => e.classId !== id); dd.notes = (dd.notes || []).filter(n => n.classId !== id);
       for (const k of Object.keys(dd.sessions)) if (dd.sessions[k].classId === id) delete dd.sessions[k];
       for (const k of Object.keys(dd.plans)) if (k.startsWith(id + '|')) delete dd.plans[k];
     }); setEdit(null); go('/classes'); return; }
@@ -80,9 +81,10 @@ export function ClassFolder({ id, tab, q }) {
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
       ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id}>Plan de classe</a>` : null}</div>`
       : html`<div class="row" style="margin-bottom:12px"><button class="btn" onClick=${() => go(apLink(todayISO(), null))}>Faire l'appel aujourd'hui (hors créneau)</button></div>`}
-    <div class="tabs">${T('eleves', 'Élèves')}${T('suivi', 'Suivi')}${T('notes', 'Notes')}${T('plans', 'Plans de classe')}</div>
+    <div class="tabs">${T('eleves', 'Élèves')}${T('suivi', 'Suivi')}${T('notes', 'Notes')}${T('evaluations', 'Évaluations')}${T('plans', 'Plans de classe')}</div>
     ${tab === 'suivi' ? html`<${Suivi} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onOpen=${setSheet} />`
-      : tab === 'notes' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
+      : tab === 'notes' ? html`<${NotesTab} cls=${cls} />`
+      : tab === 'evaluations' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
       : tab === 'plans' ? html`<${PlansList} cls=${cls} />`
       : html`<${Roster} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onSheet=${setSheet} onImport=${() => setImp(true)} onAdd=${() => setAddStu({ nom: '', prenom: '' })} onPhotos=${() => setPhotos(true)} />`}
     ${sheet ? html`<${StudentSheet} sid=${sheet} onClose=${() => setSheet(null)} />` : null}

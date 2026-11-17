@@ -65,7 +65,7 @@ export function defaultData() {
       { id: 'e2', name: 'Collège Le Segrais', type: 'trimestre', periods: defaultPeriods('trimestre') }],
     classes: [], students: [],
     rooms: [{ id: 'r1', name: 'Salle 1', v: 2, items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', v: 2, items: defaultRoomSeats() }],
-    plans: {}, slots: [], overrides: {}, holidays: [], sessions: {}, events: [], evals: [],
+    plans: {}, slots: [], overrides: {}, holidays: [], sessions: {}, events: [], evals: [], notes: [],
   };
 }
 
@@ -73,6 +73,7 @@ function migrate(d) {
   const base = defaultData();
   for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
   d.settings = { ...base.settings, ...d.settings };
+  d.notes ||= [];
   // v2 : les places deviennent des rectangles verticaux (photo + prénom)
   for (const r of d.rooms) if (r.v !== 2) {
     r.v = 2;

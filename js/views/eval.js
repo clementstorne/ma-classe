@@ -124,7 +124,7 @@ export function Eval({ id, q }) {
   if (selQ) { const step = selQ.max <= 1 ? 0.25 : 0.5; for (let v = 0; v <= selQ.max + 1e-9; v += step) quick.push(Math.round(v * 1000) / 1000); if (Math.abs(quick[quick.length - 1] - selQ.max) > 1e-9) quick.push(selQ.max); }
 
   return html`<div class="page" style="max-width:none">
-    <div class="page-head"><a class="btn ghost" href=${'#/class/' + ev.classId + '/notes'}>‹ ${cls.name}</a><h1>${ev.name}</h1>
+    <div class="page-head"><a class="btn ghost" href=${'#/class/' + ev.classId + '/evaluations'}>‹ ${cls.name}</a><h1>${ev.name}</h1>
       <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)}/20 · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
       ${groups.length ? html`<select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${grp} onChange=${e => { setGrp(e.target.value); setSel(null); }}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn small" onClick=${() => { const v = !transposed; setTransposed(v); try { localStorage.setItem('transposed', v ? '1' : '0'); } catch { /* */ } }}>⇄ ${transposed ? 'Élèves en lignes' : 'Élèves en colonnes'}</button>
@@ -168,7 +168,7 @@ function Meta({ ev, onClose }) {
   function del() {
     if (!confirm(`Supprimer l'évaluation « ${ev.name} » et toutes ses notes ?`)) return;
     mutate(dd => { dd.evals = dd.evals.filter(e => e.id !== ev.id); });
-    onClose(); go(`/class/${ev.classId}/notes`);
+    onClose(); go(`/class/${ev.classId}/evaluations`);
   }
   return html`<${Modal} title="Évaluation" onClose=${onClose} foot=${html`<button class="btn danger" onClick=${del}>Supprimer</button><span class="grow"></span><button class="btn primary" onClick=${onClose}>OK</button>`}>
     <${Field} label="Nom"><input value=${ev.name} onInput=${e => set({ name: e.target.value })} /><//>
