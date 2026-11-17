@@ -49,10 +49,10 @@ export function Appel({ classId, date, slotId }) {
   const plan = room ? getPlan(d, classId, roomId) : { seatMap: {} };
   const placed = new Set(Object.values(plan.seatMap));
   const unplaced = studs.filter(s => !placed.has(s.id));
-  const back = () => go(`/class/${classId}/eleves?date=${date}&slot=${slotId === 'x' ? '' : slotId}`);
+  const back = () => go('/');
 
   return html`<div class="page">
-    <div class="page-head"><button class="btn ghost" onClick=${back}>‹ ${cls.name}</button><h1>Appel · ${cls.name}${slot && slot.group ? ' · ' + slot.group : ''}</h1>
+    <div class="page-head"><button class="btn ghost" onClick=${back}>‹ Emploi du temps</button><h1>Appel · ${cls.name}${slot && slot.group ? ' · ' + slot.group : ''}</h1>
       <span class="sub">${fmtDateLong(date)}${slot ? ' · ' + slot.start + '–' + slot.end : ''}</span><span class="grow"></span>
       <div class="seg"><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button><button class=${view === 'plan' ? 'on P' : ''} onClick=${() => setView('plan')}>Plan</button></div></div>
     <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">Présents ${studs.length - nA - nR}</span><span class="counter a">Absents ${nA}</span><span class="counter r">Retards ${nR}</span>
