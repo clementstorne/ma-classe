@@ -152,7 +152,7 @@ function NotesList({ cls, studs, onImport }) {
         const per = (etab.periods || []).find(p => ev.date >= p.start && ev.date <= p.end);
         return html`<div class="item" key=${ev.id} onClick=${() => go('/eval/' + ev.id)}><div class="grow"><b>${ev.name}</b>
           <div class="muted small">${fmtDateShort(ev.date)}${per ? ' · ' + per.name : ''} · ${ev.exercises.reduce((n, x) => n + x.questions.length, 0)} questions</div></div>
-          <span class="chip">${avg == null ? 'pas de note' : 'moy. ' + fmtNum(avg) + '/20'}</span><span class="muted">›</span></div>`;
+          <span class="chip">${avg == null ? 'pas de note' : 'moy. ' + fmtNum(avg)}</span><span class="muted">›</span></div>`;
       })}</div>`}`;
 }
 

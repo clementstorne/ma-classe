@@ -106,12 +106,12 @@ export function Eval({ id, q }) {
     if (item.kind === 'tot') { const t = st.perEx[item.ex.id]; return html`<td class="tot">${st.entered ? fmtNum(t.total) : ''}</td>`; }
     if (item.kind === 'adj') return html`<td class="q" title="Bonus / malus" onClick=${() => askAdjust(s)}>${st.adj ? (st.adj > 0 ? '+' : '') + fmtNum(st.adj) : ''}</td>`;
     if (item.kind === 'note') return html`<td class="tot">${st.absent ? 'Abs' : st.entered ? fmtNum(st.final) + '/' + fmtNum(st.max) : ''}</td>`;
-    if (item.kind === 'n20') return html`<td class="tot">${st.absent ? 'Abs' : st.note20 == null ? '' : f1(st.note20)}</td>`;
+    if (item.kind === 'n20') return html`<td class="tot">${st.absent ? 'Abs' : st.note == null ? '' : f1(st.note)}${st.note != null && st.noteMax === 20 && st.max !== 20 ? html`<small class="muted">/20</small>` : ''}</td>`;
     const lv = st.levels[item.c];
     return html`<td class=${'lvl ' + (lv ? 'lv' + lv : '')}>${lv || ''}</td>`;
   };
   const head = item => item.kind === 'q' ? html`${item.q.label}<br /><small class="muted">/${fmtNum(item.q.max)}</small>`
-    : item.kind === 'tot' ? 'Total' : item.kind === 'adj' ? '±' : item.kind === 'note' ? 'Points' : item.kind === 'n20' ? '/20' : item.c.slice(0, 4) + '.';
+    : item.kind === 'tot' ? 'Total' : item.kind === 'adj' ? '±' : item.kind === 'note' ? 'Points' : item.kind === 'n20' ? 'Note' : item.c.slice(0, 4) + '.';
   const foot = item => {
     if (item.kind === 'q') { const a = questionAverage(ev, item.q, ids); return a ? Math.round(a.pct) + '%' : ''; }
     if (item.kind === 'tot') { const v = studs.map(s => stats[s.id]).filter(x => x.entered).map(x => x.perEx[item.ex.id].total); return v.length ? fmtNum(v.reduce((a, b) => a + b, 0) / v.length) : ''; }
@@ -123,7 +123,7 @@ export function Eval({ id, q }) {
   };
 
   const avg = evalAverage(ev, ids, comps, sById);
-  const nGraded = studs.filter(s => stats[s.id].note20 != null).length;
+  const nGraded = studs.filter(s => stats[s.id].note != null).length;
   const exSpan = ex => ex.questions.length + 1;
   const selS = sel && d.students.find(s => s.id === sel.sid), selQ = sel && allQ.find(x => x.id === sel.qid);
   const quick = [];
@@ -131,7 +131,7 @@ export function Eval({ id, q }) {
 
   return html`<div class="page" style="max-width:none">
     <div class="page-head"><a class="btn ghost" href=${'#/class/' + ev.classId + '/evaluations'}>‹ ${cls.name}</a><h1>${ev.name}</h1>
-      <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)}/20 · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
+      <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)} · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
       ${groups.length ? html`<select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${grp} onChange=${e => { setGrp(e.target.value); setSel(null); }}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn small" onClick=${() => { const v = !transposed; setTransposed(v); try { localStorage.setItem('transposed', v ? '1' : '0'); } catch { /* */ } }}>⇄ ${transposed ? 'Élèves en lignes' : 'Élèves en colonnes'}</button>
       <button class="btn small" onClick=${() => setBilan(true)}>Bilan des compétences</button>
