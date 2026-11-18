@@ -94,24 +94,25 @@ export function NotesTab({ cls }) {
     <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20) se calcule et s'arrondit comme dans Pronote (total des points pondérés rapporté au total des barèmes pondérés, arrondi au dixième supérieur) ; les absents sont ignorés.</p>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
-    : html`<div class="gridwrap"><table class="g" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px' }}>
-      <colgroup><col style=${{ width: FIRST_W + 'px' }} />${cols.map(() => html`<col style=${{ width: COL_W + 'px' }} />`)}<col style=${{ width: COL_W + 'px' }} /></colgroup>
-      <thead><tr><th class="stk">Élève</th>${cols.map(c => html`<th key=${c.id} style="height:58px;cursor:pointer;line-height:1.25"
+    : html`<div class="gridwrap"><table class="g notes" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px' }}>
+      <colgroup><col style=${{ width: FIRST_W + 'px' }} /><col style=${{ width: COL_W + 'px' }} />${cols.map(() => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
+      <thead><tr><th class="stk">Élève</th><th class="moy" style="height:58px">Moyenne<br /><small>/20</small></th>${cols.map(c => html`<th key=${c.id} style="height:58px;cursor:pointer;line-height:1.25"
           onClick=${() => c.kind === 'eval' ? go('/eval/' + c.id) : setForm({ id: c.id, name: c.name, date: c.date, max: String(c.max) })}
           title=${c.kind === 'eval' ? 'Ouvrir l\'évaluation' : 'Modifier la note'}>
           <div style="overflow:hidden;text-overflow:ellipsis">${c.kind === 'eval' ? '📋 ' : ''}${c.name}</div>
-          <small class="muted">${fmtDateShort(c.date)} · /${fmtNum(c.max)}</small></th>`)}<th class="tot" style="height:58px">Moyenne<br /><small class="muted">/20</small></th></tr>
-        <tr><th class="stk" style="height:36px">Coef.</th>${cols.map(c => html`<th key=${c.id + coefOf(c)} style="height:36px;padding:0"><input class="cellin" style="min-height:34px" inputmode="decimal" defaultValue=${fmtNum(coefOf(c))} aria-label=${'Coefficient ' + c.name}
-          onFocus=${e => e.target.select()} onBlur=${e => { if (!setCoef(c, e.target.value)) e.target.classList.add('bad'); }} onKeyDown=${e => { if (e.key === 'Enter') e.target.blur(); }} /></th>`)}<th class="tot" style="height:36px"></th></tr></thead>
-      <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th>${cols.map(c => {
-        const v = value(c, s);
-        if (c.kind === 'eval') return html`<td class="tot" style="cursor:pointer" onClick=${() => go('/eval/' + c.id)}>${v === 'abs' ? 'Abs' : v == null ? '' : f1(v)}</td>`;
-        return html`<td key=${c.id + s.id + v}><input class="cellin" inputmode="decimal" defaultValue=${v === 'abs' ? 'Abs' : v == null ? '' : fmtNum(v)} aria-label=${c.name + ' ' + lab[s.id]}
+          <small class="muted">${fmtDateShort(c.date)} · /${fmtNum(c.max)}</small></th>`)}</tr>
+        <tr><th class="stk" style="height:36px">Coef.</th><th class="moy" style="height:36px"></th>${cols.map(c => html`<th key=${c.id + coefOf(c)} style="height:36px;padding:0"><input class="cellin" style="min-height:34px" inputmode="decimal" defaultValue=${fmtNum(coefOf(c))} aria-label=${'Coefficient ' + c.name}
+          onFocus=${e => e.target.select()} onBlur=${e => { if (!setCoef(c, e.target.value)) e.target.classList.add('bad'); }} onKeyDown=${e => { if (e.key === 'Enter') e.target.blur(); }} /></th>`)}</tr></thead>
+      <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th><td class="moy">${(m => m == null ? '' : f10(m))(moyenne(s))}</td>${cols.map(c => {
+        const v = value(c, s), mx = c.kind === 'eval' ? studentStats(c.ev, s.id, d.settings.comps, s).noteMax : c.max;
+        const sfx = typeof v === 'number' ? html`<span class="mxa">/${fmtNum(mx)}</span>` : null;
+        if (c.kind === 'eval') return html`<td class="tot cw" style="cursor:pointer" onClick=${() => go('/eval/' + c.id)}>${v === 'abs' ? 'Abs' : v == null ? '' : f1(v)}${sfx}</td>`;
+        return html`<td class="cw" key=${c.id + s.id + v}><input class="cellin" inputmode="decimal" defaultValue=${v === 'abs' ? 'Abs' : v == null ? '' : fmtNum(v)} aria-label=${c.name + ' ' + lab[s.id]}
           onFocus=${e => e.target.select()}
           onBlur=${e => { if (!setScore(c.n, s.id, e.target.value)) e.target.classList.add('bad'); }}
-          onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); const t = e.target.closest('tr').nextElementSibling; const i = e.target.closest('td').cellIndex; const nx = t && t.cells[i] && t.cells[i].querySelector('input'); e.target.blur(); if (nx) nx.focus(); } }} /></td>`;
-      })}<td class="tot">${(m => m == null ? '' : f10(m))(moyenne(s))}</td></tr>`)}</tbody>
-      <tfoot><tr><th class="stk">Moyenne</th>${cols.map(c => html`<td>${avg(c)}</td>`)}<td class="tot">${moyClasse}</td></tr></tfoot></table></div>`}
+          onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); const t = e.target.closest('tr').nextElementSibling; const i = e.target.closest('td').cellIndex; const nx = t && t.cells[i] && t.cells[i].querySelector('input'); e.target.blur(); if (nx) nx.focus(); } }} />${sfx}</td>`;
+      })}</tr>`)}</tbody>
+      <tfoot><tr><th class="stk">Moyenne</th><td class="moy">${moyClasse}</td>${cols.map(c => html`<td>${avg(c)}</td>`)}</tr></tfoot></table></div>`}
     ${imp ? html`<${PronoteImport} cls=${cls} onClose=${() => setImp(false)} onDone=${() => setPer('all')} />` : null}
     ${form ? html`<${Modal} title=${form.id ? 'Modifier la note' : 'Nouvelle note'} onClose=${() => setForm(null)}
       foot=${html`${form.id ? html`<button class="btn danger" onClick=${del}>Supprimer</button>` : null}<span class="grow"></span><button class="btn" onClick=${() => setForm(null)}>Annuler</button><button class="btn primary" onClick=${save}>Enregistrer</button>`}>
