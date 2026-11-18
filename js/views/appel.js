@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, groupStudents, studentsOf, roomsFor, sessionKey, roomById, getPlan, occurrence } from '../store.js';
+import { useStore, mutate, classById, groupStudents, studentsOf, roomsFor, sessionKey, roomById, getPlan, planKey, occurrence } from '../store.js';
 import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
@@ -45,7 +45,8 @@ export function Appel({ classId, date, slotId }) {
 
   const byId = Object.fromEntries(studs.map(s => [s.id, s]));
   const room = roomById(d, roomId);
-  const plan = room ? getPlan(d, classId, roomId) : { seatMap: {} };
+  const gp = slot && slot.group && d.plans[planKey(classId, roomId, slot.group)];
+  const plan = room ? (gp || getPlan(d, classId, roomId)) : { seatMap: {} };
   const placed = new Set(Object.values(plan.seatMap));
   const unplaced = studs.filter(s => !placed.has(s.id));
 

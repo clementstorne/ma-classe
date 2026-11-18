@@ -1,6 +1,7 @@
 import { html, useState } from '../../vendor/preact-htm.js';
 import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
-import { planKey, roomH, photoOf, ROOM_W } from '../store.js';
+import { planKey, parsePlanKey, groupStudents } from '../store.js';
+import { PlanThumb } from './salles.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { NotesTab } from './notes.js';
@@ -81,7 +82,7 @@ export function ClassFolder({ id, tab, q }) {
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
         <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${slot && slot.group ? ' · groupe ' + slot.group : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
-      ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id}>Plan de classe</a>` : null}</div>`
+      ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id + (slot && slot.group && d.plans[planKey(id, room.id, slot.group)] ? '?g=' + encodeURIComponent(slot.group) : '')}>Plan de classe</a>` : null}</div>`
       : null}
     <div class="tabs">${T('eleves', 'users', 'Élèves')}${T('suivi', 'chart', 'Suivi')}${T('notes', 'pen', 'Notes')}${T('evaluations', 'clip', 'Évaluations')}${T('plans', 'layout', 'Plans de classe')}</div>
     ${tab === 'suivi' ? html`<${Suivi} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onOpen=${setSheet} />`
@@ -154,44 +155,41 @@ function NotesList({ cls, studs, onImport }) {
       })}</div>`}`;
 }
 
-function PlanThumb({ room, seatMap }) {
-  const H = roomH(room), bg = photoOf('bg-' + room.id);
-  const pc = (v, t) => (v / t * 100) + '%';
-  return html`<div class="plan-thumb" style=${{ aspectRatio: ROOM_W + ' / ' + H, ...(bg ? { backgroundImage: `url(${bg})`, backgroundSize: '100% 100%' } : {}) }}>
-    ${room.items.map(it => html`<div key=${it.id} class=${'pt ' + (it.kind === 'label' ? 'lb' : seatMap[it.id] ? 'on' : 'off')}
-      style=${{ left: pc(it.x, ROOM_W), top: pc(it.y, H), width: pc(it.w, ROOM_W), height: pc(it.h, H) }}>${it.kind === 'label' ? it.text : ''}</div>`)}</div>`;
-}
-
 function PlansList({ cls }) {
   const d = useStore();
-  const [add, setAdd] = useState(null);
+  const [add, setAdd] = useState(null);   // { roomId, group }
   const rooms = roomsFor(d, cls);
-  const made = rooms.filter(r => d.plans[planKey(cls.id, r.id)]);
-  const free = rooms.filter(r => !d.plans[planKey(cls.id, r.id)]);
+  const groups = groupsOf(cls);
+  const made = Object.keys(d.plans).map(k => ({ k, ...parsePlanKey(k) })).filter(x => x.classId === cls.id && d.rooms.some(r => r.id === x.roomId))
+    .sort((a, b) => roomById(d, a.roomId).name.localeCompare(roomById(d, b.roomId).name, 'fr') || a.group.localeCompare(b.group, 'fr'));
+  const exists = add && !!d.plans[planKey(cls.id, add.roomId, add.group)];
   function create() {
-    if (!add) return;
-    mutate(dd => { dd.plans[planKey(cls.id, add)] ||= { seatMap: {} }; });
-    const rid = add; setAdd(null); go(`/plan/${cls.id}/${rid}`);
+    if (!add || !add.roomId || exists) return;
+    mutate(dd => { dd.plans[planKey(cls.id, add.roomId, add.group)] ||= { seatMap: {} }; });
+    const a = add; setAdd(null); go(`/plan/${cls.id}/${a.roomId}` + (a.group ? '?g=' + encodeURIComponent(a.group) : ''));
   }
-  function remove(r) {
-    if (!confirm(`Supprimer le plan de classe de ${cls.name} en ${r.name} ?`)) return;
-    mutate(dd => { delete dd.plans[planKey(cls.id, r.id)]; });
+  function remove(x) {
+    const r = roomById(d, x.roomId);
+    if (!confirm(`Supprimer le plan de classe de ${cls.name}${x.group ? ' (' + x.group + ')' : ''} en ${r.name} ?`)) return;
+    mutate(dd => { delete dd.plans[x.k]; });
   }
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setAdd(free[0] ? free[0].id : '')}>${Ico('plus')} Ajouter un plan de classe</button></div>
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setAdd({ roomId: rooms[0] ? rooms[0].id : '', group: '' })}>${Ico('plus')} Ajouter un plan de classe</button></div>
     ${!made.length ? html`<${Empty} title="Aucun plan de classe"><p>Ajoute un plan en choisissant l'une des salles de l'établissement.</p><//>`
-    : html`<div class="plan-cards">${made.map(r => {
-        const p = getPlan(d, cls.id, r.id);
+    : html`<div class="plan-cards">${made.map(x => {
+        const r = roomById(d, x.roomId), p = d.plans[x.k];
         const n = Object.values(p.seatMap).filter(sid => d.students.some(s => s.id === sid)).length;
-        return html`<div class="card plan-card" key=${r.id} onClick=${() => go(`/plan/${cls.id}/${r.id}`)}>
+        return html`<div class="card plan-card" key=${x.k} onClick=${() => go(`/plan/${cls.id}/${r.id}` + (x.group ? '?g=' + encodeURIComponent(x.group) : ''))}>
           <${PlanThumb} room=${r} seatMap=${p.seatMap} />
-          <div class="row" style="margin-top:10px"><div class="grow"><b>${r.name}</b>
+          <div class="row" style="margin-top:10px"><div class="grow"><b>${r.name}${x.group ? ' · ' + x.group : ''}</b>
             <div class="muted small">${r.items.filter(i => i.kind === 'seat').length} places · ${n} élève(s) placé(s)</div></div>
-            <button class="btn small danger" onClick=${e => { e.stopPropagation(); remove(r); }}>Supprimer</button></div></div>`;
+            <button class="btn small danger" onClick=${e => { e.stopPropagation(); remove(x); }}>Supprimer</button></div></div>`;
       })}</div>`}
-    ${add !== null ? html`<${Modal} title="Ajouter un plan de classe" onClose=${() => setAdd(null)}
-      foot=${html`<button class="btn" onClick=${() => setAdd(null)}>Annuler</button><button class="btn primary" disabled=${!add} onClick=${create}>Créer le plan</button>`}>
-      ${free.length ? html`<${Field} label=${'Salle de ' + etabOf(d, cls).name}><select value=${add} onChange=${e => setAdd(e.target.value)}>${free.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select><//>`
-        : html`<p class="muted">${rooms.length ? 'Toutes les salles de cet établissement ont déjà un plan pour cette classe.' : 'Aucune salle n\'est rattachée à cet établissement. Ajoutes-en dans Paramètres › Établissements et salles.'}</p>`}<//>` : null}`;
+    ${add ? html`<${Modal} title="Ajouter un plan de classe" onClose=${() => setAdd(null)}
+      foot=${html`<button class="btn" onClick=${() => setAdd(null)}>Annuler</button><button class="btn primary" disabled=${!add.roomId || exists} onClick=${create}>Créer le plan</button>`}>
+      ${rooms.length ? html`<${Field} label=${'Salle de ' + etabOf(d, cls).name}><select value=${add.roomId} onChange=${e => setAdd({ ...add, roomId: e.target.value })}>${rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select><//>
+        ${groups.length ? html`<${Field} label="Pour"><select value=${add.group} onChange=${e => setAdd({ ...add, group: e.target.value })}><option value="">La classe entière</option>${groups.map(g => html`<option value=${g}>Le groupe ${g}</option>`)}</select><//>` : null}
+        ${exists ? html`<p class="muted">Ce plan existe déjà.</p>` : null}`
+        : html`<p class="muted">Aucune salle n'est rattachée à cet établissement. Ajoutes-en dans le menu Salles.</p>`}<//>` : null}`;
 }
 
 /* ---------- Liste des élèves avec groupes ---------- */

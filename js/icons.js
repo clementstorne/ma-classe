@@ -12,6 +12,9 @@ const ICO = {
   chart: 'M4 20V11M10 20V5M16 20v-7M2 20h20',
   pen: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
   clip: 'M9 4h6v3H9zM7 5.5H5.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1H17M8.5 14l2.5 2.5 4.5-5',
+  shuffle: 'M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5',
+  reset: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5',
+  door: 'M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14 12v.01',
   layout: 'M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 13h7v7H4z'
 };
 export const Ico = (k, size = 18) => html`<svg class="ico" viewBox="0 0 24 24" width=${size} height=${size} fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${ICO[k]} /></svg>`;

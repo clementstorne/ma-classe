@@ -1,8 +1,8 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, studentsOf, photoOf, roomsFor, roomH, getPlan, planKey, ROOM_W, ROOM_H, SEAT_W, SEAT_H } from '../store.js';
+import { useStore, mutate, classById, roomById, studentsOf, groupStudents, photoOf, roomH, getPlan, planKey, ROOM_W } from '../store.js';
 import { Modal, Field, Avatar, Empty, toast } from './common.js';
 import { uid, displayName, initials, seatLabels, shareOrDownload } from '../util.js';
-import { go } from '../router.js';
+import { Ico } from '../icons.js';
 
 /* ---------- Moteur de glisser-déposer (souris + tactile) ---------- */
 export function startDrag(e, { label, onTap, onDrop }) {
@@ -99,26 +99,25 @@ export function PlanCanvas({ room, seatMap, byId, mode, selected, onSeatTap, onS
     </div></div>`;
 }
 
-/* ---------- Page du plan de classe ---------- */
-export function PlanPage({ classId, roomId }) {
+/* ---------- Page du plan de classe (classe entière ou groupe) ---------- */
+export function PlanPage({ classId, roomId, group }) {
   const d = useStore();
   const cls = classById(d, classId);
   const room = roomById(d, roomId);
-  const [mode, setMode] = useState('place');
   const [selSeat, setSelSeat] = useState(null);   // siège sélectionné
   const [selStu, setSelStu] = useState(null);     // élève du banc sélectionné
-  const [gen, setGen] = useState(false);
   if (!cls || !room) return html`<${Empty} title="Plan introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
-  const studs = studentsOf(d, classId);
+  const studs = group ? groupStudents(d, classId, group) : studentsOf(d, classId);
   const byId = Object.fromEntries(studs.map(s => [s.id, s]));
-  const plan = getPlan(d, classId, roomId);
+  const plan = getPlan(d, classId, roomId, group);
   const placed = new Set(Object.values(plan.seatMap));
   const bench = studs.filter(s => !placed.has(s.id));
-  const key = planKey(classId, roomId);
-  const edit = fn => mutate(dd => { const p = dd.plans[key] ||= { seatMap: {} }; fn(p, dd.rooms.find(r => r.id === roomId)); });
+  const key = planKey(classId, roomId, group);
+  const edit = fn => mutate(dd => { const p = dd.plans[key] ||= { seatMap: {} }; fn(p); });
+  const seats = room.items.filter(i => i.kind === 'seat');
+  const title = `${cls.name}${group ? ' · ' + group : ''} · ${room.name}`;
 
   function seatTap(it) {
-    if (mode === 'template') { setSelSeat(it.id === selSeat ? null : it.id); return; }
     if (selStu) { edit(p => moveStudent(p, selStu, it.id)); setSelStu(null); setSelSeat(null); return; }
     const occ = plan.seatMap[it.id];
     if (selSeat && selSeat !== it.id) {
@@ -138,73 +137,41 @@ export function PlanPage({ classId, roomId }) {
   function benchDown(e, s) {
     startDrag(e, { label: displayName(s), onTap: () => benchTap(s), onDrop: t => { if (t && t !== 'bench') { edit(p => moveStudent(p, s.id, t)); setSelStu(null); } } });
   }
-
-  /* ---- modèle de salle ---- */
-  const itemChange = (id, patch) => edit((p, r) => Object.assign(r.items.find(i => i.id === id), patch));
-  const addSeat = () => edit((p, r) => { r.items.push({ id: uid(), kind: 'seat', x: 500, y: 300, w: SEAT_W, h: SEAT_H }); });
-  const addLabel = () => { const t = prompt('Texte du repère (ex. Tableau, Bureau, Porte, Fenêtre)', 'Bureau'); if (t) edit((p, r) => r.items.push({ id: uid(), kind: 'label', x: 500, y: 20, w: 240, h: 44, text: t })); };
-  const delSel = () => { if (!selSeat) return; edit((p, r) => { r.items = r.items.filter(i => i.id !== selSeat); delete p.seatMap[selSeat]; }); setSelSeat(null); };
   async function exportImage() {
     try {
-      const blob = await renderPlanImage(room, plan.seatMap, byId, seatLabels(studs), `${cls.name} · ${room.name}`);
-      const r = await shareOrDownload(blob, `plan-${cls.name}-${room.name}.png`.replace(/[\\/:*?"<>|\s]+/g, '_'));
+      const blob = await renderPlanImage(room, plan.seatMap, byId, seatLabels(studs), title);
+      const r = await shareOrDownload(blob, `plan-${title}.png`.replace(/[\\/:*?"<>|\s]+/g, '_'));
       if (r === 'downloaded') toast('Image enregistrée (dossier Téléchargements).');
     } catch (e) { toast('Export impossible.'); }
   }
-  const dupSel = () => { if (!selSeat) return; edit((p, r) => { const i = r.items.find(x => x.id === selSeat); if (i) r.items.push({ ...i, id: uid(), x: Math.min(ROOM_W - i.w, i.x + 20), y: Math.min(roomH(r) - i.h, i.y + 20) }); }); };
-  const editLabel = () => { const it = room.items.find(i => i.id === selSeat); if (!it || it.kind !== 'label') return; const t = prompt('Texte du repère', it.text); if (t) itemChange(it.id, { text: t }); };
-  const clearRoom = () => { if (confirm('Supprimer tous les éléments de cette salle ? Les plans de toutes les classes seront vidés.')) { mutate(dd => { dd.rooms.find(r => r.id === roomId).items = []; for (const k of Object.keys(dd.plans)) if (k.endsWith('|' + roomId)) dd.plans[k].seatMap = {}; }); setSelSeat(null); } };
-  const clearPlan = () => { if (confirm('Retirer tous les élèves du plan ?')) edit(p => { p.seatMap = {}; }); };
-  const selItem = room.items.find(i => i.id === selSeat);
+  const reset = () => { if (!placed.size || confirm('Retirer tous les élèves du plan ?')) { edit(p => { p.seatMap = {}; }); setSelSeat(null); setSelStu(null); } };
+  function randomize() {
+    if (!seats.length || !studs.length) return;
+    if (placed.size && !confirm('Remplacer le placement actuel par un placement aléatoire ?')) return;
+    const order = studs.map(s => s.id);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    edit(p => { p.seatMap = {}; order.forEach((sid, i) => { if (seats[i]) p.seatMap[seats[i].id] = sid; }); });
+    setSelSeat(null); setSelStu(null);
+  }
+  const hint = selStu ? 'Touche maintenant un siège pour y placer l\'élève.' : selSeat ? 'Touche un autre siège pour intervertir les deux élèves.' : '';
 
   return html`<div class="page" style="max-width:1400px">
     <div class="page-head">
       <a class="btn" href=${'#/class/' + classId + '/plans'}>‹ ${cls.name}</a>
-      <h1>Plan de classe</h1>
-      <select class="inp" style="width:auto" value=${roomId} onChange=${e => go(`/plan/${classId}/${e.target.value}`)}>${[...roomsFor(d, cls), ...(roomsFor(d, cls).some(r => r.id === roomId) ? [] : [room])].map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
+      <h1>${group ? group + ' · ' : ''}${room.name}</h1>
       <span class="grow"></span>
-      <button class="btn" onClick=${exportImage}>Exporter</button>
-      <div class="seg"><button class=${mode === 'place' ? 'on P' : ''} onClick=${() => { setMode('place'); setSelSeat(null); }}>Placement</button>
-        <button class=${mode === 'template' ? 'on P' : ''} onClick=${() => { setMode('template'); setSelSeat(null); setSelStu(null); }}>Modèle de la salle</button></div>
+      <button class="btn" onClick=${randomize}>${Ico('shuffle')} Placement aléatoire</button>
+      <button class="btn" onClick=${reset}>${Ico('reset')} Réinitialiser</button>
+      <button class="btn" onClick=${exportImage}>${Ico('download')} Exporter</button>
     </div>
-    ${mode === 'template' ? html`<div class="row" style="margin-bottom:10px">
-        <button class="btn small" onClick=${addSeat}>＋ Table</button><button class="btn small" onClick=${() => setGen(true)}>▦ Générer une grille</button>
-        <button class="btn small" onClick=${addLabel}>＋ Repère (tableau, bureau…)</button><span class="grow"></span>
-        ${selItem ? html`${selItem.kind === 'label' ? html`<button class="btn small" onClick=${editLabel}>Renommer</button>` : null}
-          <button class="btn small" onClick=${dupSel}>Dupliquer</button><button class="btn small danger" onClick=${delSel}>Supprimer</button>` : html`<span class="hint">Glisse les éléments pour les placer ; touche-en un pour le sélectionner.</span>`}
-        <button class="btn small danger" onClick=${clearRoom}>Tout effacer</button></div>
-      <p class="hint">Le modèle est propre à la salle « ${room.name} » : il sert à toutes tes classes. Le placement des élèves, lui, est propre à chaque classe.</p>`
-      : html`<p class="hint">${selStu ? 'Touche maintenant un siège pour y placer l\'élève.' : selSeat ? 'Touche un autre siège pour intervertir les deux élèves.' : 'Glisse un élève sur un siège (ou touche l\'élève puis le siège). Glisser un élève sur un siège occupé intervertit les deux.'}</p>`}
+    ${hint ? html`<div class="row" style="margin-bottom:8px"><span class="hint">${hint}</span>${selSeat && plan.seatMap[selSeat] ? html`<button class="btn small" onClick=${() => { edit(p => unplace(p, plan.seatMap[selSeat])); setSelSeat(null); }}>Retirer du plan</button>` : null}</div>` : null}
     <div class="plan-layout">
-      ${mode === 'place' ? html`<div class="bench" data-drop="bench"><h3>À placer (${bench.length})</h3>
+      ${bench.length ? html`<div class="bench" data-drop="bench"><h3>À placer (${bench.length})</h3>
         ${bench.map(s => html`<div class=${'chipst' + (selStu === s.id ? ' sel' : '')} key=${s.id} onPointerDown=${e => benchDown(e, s)}><${Avatar} s=${s} size=${34} /><span><b>${s.nom}</b> ${s.prenom}</span></div>`)}
-        ${!bench.length ? html`<p class="hint" style="padding:6px">Tous les élèves sont placés.</p>` : null}
-        <hr class="sep" /><button class="btn small" style="width:100%" onClick=${clearPlan}>Vider le plan</button>
-        ${selSeat && plan.seatMap[selSeat] ? html`<button class="btn small" style="width:100%;margin-top:6px" onClick=${() => { edit(p => unplace(p, plan.seatMap[selSeat])); setSelSeat(null); }}>Retirer du plan</button>` : null}</div>` : null}
-      <${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} mode=${mode} selected=${selSeat} onSeatTap=${seatTap} onSeatDrop=${seatDrop} onItemChange=${itemChange} />
+        </div>` : null}
+      <${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} mode="place" selected=${selSeat} onSeatTap=${seatTap} onSeatDrop=${seatDrop} />
     </div>
-    ${gen ? html`<${GridGen} onClose=${() => setGen(false)} onGen=${items => { edit((p, r) => { r.items.push(...items); }); setGen(false); }} />` : null}
   </div>`;
-}
-
-function GridGen({ onClose, onGen }) {
-  const [rows, setRows] = useState(5), [cols, setCols] = useState(6), [group, setGroup] = useState(2);
-  function gen() {
-    const sw = SEAT_W, sh = SEAT_H, gap = 10, gGap = 40, y0 = 110;
-    const groups = Math.ceil(cols / group);
-    const totalW = cols * sw + (cols - 1) * gap + (groups - 1) * gGap;
-    const x0 = Math.max(10, Math.round((ROOM_W - totalW) / 2 / 10) * 10);
-    const rowH = Math.min(sh + 8, Math.floor((ROOM_H - y0 - 10) / rows));
-    const items = [];
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
-      items.push({ id: uid(), kind: 'seat', x: x0 + c * (sw + gap) + Math.floor(c / group) * gGap, y: y0 + r * rowH, w: sw, h: Math.min(sh, rowH - 6) });
-    onGen(items);
-  }
-  const num = (v, set, max) => html`<input type="number" min="1" max=${max} value=${v} onInput=${e => set(Math.max(1, Math.min(max, Number(e.target.value) || 1)))} />`;
-  return html`<${Modal} title="Générer une grille de tables" onClose=${onClose} foot=${html`<button class="btn" onClick=${onClose}>Annuler</button><button class="btn primary" onClick=${gen}>Ajouter ${rows * cols} tables</button>`}>
-    <div class="row"><${Field} label="Rangées">${num(rows, setRows, 8)}<//><${Field} label="Colonnes">${num(cols, setCols, 10)}<//>
-    <${Field} label="Tables par îlot (écart entre les îlots)">${num(group, setGroup, 10)}<//></div>
-    <p class="hint">Les tables sont ajoutées au modèle actuel ; utilise « Tout effacer » avant pour repartir de zéro.</p><//>`;
 }
 
 /* ---------- Export en image (PNG) : les places vides ne sont pas dessinées ---------- */

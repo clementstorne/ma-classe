@@ -8,6 +8,7 @@ import { PlanPage } from './views/plan.js';
 import { Eval } from './views/eval.js';
 import { Settings } from './views/settings.js';
 import { Ico } from './icons.js';
+import { Salles, RoomEditor } from './views/salles.js';
 
 function App() {
   const d = useStore();
@@ -19,15 +20,17 @@ function App() {
   else if (a === 'classes') view = html`<${ClassList} />`;
   else if (a === 'class') { view = html`<${ClassFolder} key=${b} id=${b} tab=${c || 'eleves'} q=${q} />`; nav = 'classes'; }
   else if (a === 'appel') { view = html`<${Appel} key=${b + c + e} classId=${b} date=${c} slotId=${e || 'x'} />`; nav = 'edt'; }
-  else if (a === 'plan') { view = html`<${PlanPage} key=${b + c} classId=${b} roomId=${c} />`; nav = 'classes'; }
+  else if (a === 'plan') { view = html`<${PlanPage} key=${b + c + (q.g || '')} classId=${b} roomId=${c} group=${q.g || ''} />`; nav = 'classes'; }
   else if (a === 'eval') { view = html`<${Eval} key=${b} id=${b} q=${q} />`; nav = 'classes'; }
+  else if (a === 'salles') { view = html`<${Salles} />`; nav = 'salles'; }
+  else if (a === 'salle') { view = html`<${RoomEditor} key=${b} id=${b} />`; nav = 'salles'; }
   else if (a === 'etabs') { go('/settings/etablissements'); view = null; nav = "settings"; }
   else if (a === 'settings') { view = html`<${Settings} tab=${b} />`; nav = 'settings'; }
   else view = html`<${Schedule} />`;
   const N = (k, href, label) => html`<a class=${nav === k ? 'on' : ''} href=${href}>${label}</a>`;
   return html`<div class="app">
     <header class="topbar"><span class="brand"><img src="icons/favicon.png" alt="" class="logo" />Ma classe</span>
-      <nav class="nav">${N('edt', '#/', html`${Ico('cal')} Emploi du temps`)}${N('classes', '#/classes', html`${Ico('users')} Classes`)}</nav><span class="grow"></span><nav class="nav">${N('settings', '#/settings', html`${Ico('gear')} Paramètres`)}</nav></header>
+      <nav class="nav">${N('edt', '#/', html`${Ico('cal')} Emploi du temps`)}${N('classes', '#/classes', html`${Ico('users')} Classes`)}${N('salles', '#/salles', html`${Ico('door')} Salles`)}</nav><span class="grow"></span><nav class="nav">${N('settings', '#/settings', html`${Ico('gear')} Paramètres`)}</nav></header>
     <main class=${'main' + (nav === 'edt' && !a ? ' fit' : '')}>${view}</main></div>`;
 }
 

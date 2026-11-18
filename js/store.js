@@ -141,8 +141,10 @@ export const etabOf = (d, cls) => d.etabs.find(e => e.id === (cls && cls.etabId)
 export const roomsFor = (d, cls) => d.rooms.filter(r => !r.etabId || !cls || r.etabId === cls.etabId);
 export const roomH = r => (r && r.h) || ROOM_H;
 export const roomById = (d, id) => d.rooms.find(r => r.id === id);
-export const planKey = (classId, roomId) => `${classId}|${roomId}`;
-export function getPlan(d, classId, roomId) { return d.plans[planKey(classId, roomId)] || { seatMap: {} }; }
+export const planKey = (classId, roomId, group) => `${classId}|${roomId}` + (group ? '|' + group : '');
+export function getPlan(d, classId, roomId, group) { return d.plans[planKey(classId, roomId, group)] || { seatMap: {} }; }
+/** Décompose une clé de plan : classe, salle, groupe éventuel. */
+export const parsePlanKey = k => { const [classId, roomId, ...g] = k.split('|'); return { classId, roomId, group: g.join('|') }; };
 export function periodFor(etab, dateISO) {
   return (etab.periods || []).find(p => dateISO >= p.start && dateISO <= p.end) || null;
 }
