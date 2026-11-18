@@ -269,3 +269,7 @@ table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--c
 .slot:has(.wk) b{padding-right:22px;display:block}
 .tg.on.abs{background:var(--ko);border-color:var(--ko)} .tg.on.ret{background:var(--warn);border-color:var(--warn)}
 .tg.on.abs{background:var(--ko-soft);border-color:var(--ko);border-width:2px} .tg.on.ret{background:var(--warn-soft);border-color:var(--warn);border-width:2px}
+.etab-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;align-items:start}
+.etab-col{display:flex;flex-direction:column;gap:10px}
+.etab-col h3{margin:0 0 2px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.etab-col .class-card{width:auto}

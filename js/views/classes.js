@@ -20,17 +20,17 @@ export function ClassList() {
     setForm(null);
   }
   return html`<div class="page">
-    <div class="page-head"><h1>Classes</h1><span class="grow"></span>
+    <div class="page-head"><span class="grow"></span>
       <button class="btn primary" onClick=${() => setForm({ name: '', etabId: d.etabs[0].id, color: CLASS_COLORS[d.classes.length % CLASS_COLORS.length] })}>＋ Nouvelle classe</button></div>
     ${!d.classes.length ? html`<${Empty} title="Aucune classe">
       <p>Crée une classe puis importe ses élèves (CSV / Excel / copier-coller).</p><//>` : null}
-    ${d.etabs.map(e => {
+    <div class="etab-cols">${d.etabs.map(e => {
       const cs = sortedClasses(d).filter(c => c.etabId === e.id);
       if (!cs.length) return null;
-      return html`<h3 style="margin:16px 0 8px">${e.name}</h3><div class="cards">${cs.map(c => html`
+      return html`<section class="etab-col" key=${e.id}><h3>${e.name}</h3>${cs.map(c => html`
         <a class="card class-card" href=${'#/class/' + c.id + '/eleves'} style=${{ '--c': classColor(c) }}>
-          <b>${c.name}</b><span class="muted">${d.students.filter(s => s.classId === c.id).length} élèves</span></a>`)}</div>`;
-    })}
+          <b>${c.name}</b><span class="muted">${d.students.filter(s => s.classId === c.id).length} élèves</span></a>`)}</section>`;
+    })}</div>
     ${form ? html`<${Modal} title=${form.id ? 'Modifier la classe' : 'Nouvelle classe'} onClose=${() => setForm(null)}
       foot=${html`<button class="btn" onClick=${() => setForm(null)}>Annuler</button><button class="btn primary" onClick=${save}>Enregistrer</button>`}>
       <${Field} label="Nom de la classe"><input value=${form.name} placeholder="ex. 4C" onInput=${e => setForm({ ...form, name: e.target.value })} /><//>
