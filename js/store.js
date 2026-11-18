@@ -74,8 +74,6 @@ function migrate(d) {
   for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
   d.settings = { ...base.settings, ...d.settings };
   d.notes ||= [];
-  // noms d'établissements neutres par défaut (anciens noms propres remplacés)
-  for (const e of d.etabs) { if (e.id === 'e1' && e.name === 'Collège Victor Schoelcher') e.name = 'Établissement 1'; if (e.id === 'e2' && e.name === 'Collège Le Segrais') e.name = 'Établissement 2'; }
   // v2 : les places deviennent des rectangles verticaux (photo + prénom)
   for (const r of d.rooms) if (r.v !== 2) {
     r.v = 2;
