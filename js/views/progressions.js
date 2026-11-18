@@ -189,8 +189,8 @@ function ChapterList({ d, level }) {
     return html`<div class="item chrow" key=${ch.id} style=${{ cursor: 'default', borderLeft: '6px solid ' + (p ? p.color : 'var(--line)') }}>
       <span class="muted chn">${i + 1}</span>
       <input class="inp grow" value=${ch.title} onInput=${e => set(ch.id, { title: e.target.value })} aria-label="Titre du chapitre" />
-      <select class="inp" style="width:auto;max-width:210px" value=${ch.part || ''} onChange=${e => set(ch.id, { part: e.target.value })}><option value="">Sans partie</option>${parts.map(x => html`<option value=${x.id}>${x.name}</option>`)}</select>
-      <select class="inp" style="width:auto" value=${ch.weeks || 1} onChange=${e => set(ch.id, { weeks: Number(e.target.value) })}>${WEEK_OPTS.map(w => html`<option value=${w}>${fmtW(w)} sem.</option>`)}</select>
+      <select class="inp" value=${ch.part || ''} onChange=${e => set(ch.id, { part: e.target.value })}><option value="">Sans partie</option>${parts.map(x => html`<option value=${x.id}>${x.name}</option>`)}</select>
+      <select class="inp" value=${ch.weeks || 1} onChange=${e => set(ch.id, { weeks: Number(e.target.value) })}>${WEEK_OPTS.map(w => html`<option value=${w}>${fmtW(w)} sem.</option>`)}</select>
       <span class="cps"><${Chips} d=${d} level=${level} ch=${ch} late=${false} /></span>
       <button class="btn small" disabled=${i === 0} onClick=${() => move(ch.id, -1)} aria-label="Monter">↑</button>
       <button class="btn small" disabled=${i === list.length - 1} onClick=${() => move(ch.id, 1)} aria-label="Descendre">↓</button>
