@@ -180,7 +180,7 @@ export function Progressions() {
       ${view === 'list' ? html`<button class="btn primary" disabled=${!level} onClick=${addChapter}>${Ico('plus')} Ajouter un chapitre</button>` : null}</div>
     ${view === 'list' && levels.length ? html`<div class="tabs">${levels.map(l => html`<a key=${l} class=${l === level ? 'on' : ''} href="javascript:void 0" onClick=${e => { e.preventDefault(); setLvl(l); }}>${l} <span class="muted">(${chaptersOf(d, l).length})</span></a>`)}</div>` : null}
     ${!levels.length ? html`<${Empty} title="Aucune classe" />`
-      : view === 'cal' ? (d.chapters.length ? html`<${Calendar} d=${d} levels=${levels} />` : html`<${Empty} title="Aucun chapitre" />`)
+      : view === 'cal' ? (d.chapters.length ? html`<${Calendar} d=${d} levels=${levels.filter(l => chaptersOf(d, l).length)} />` : html`<${Empty} title="Aucun chapitre" />`)
       : html`<${ChapterList} d=${d} level=${level} />`}
     ${parts ? html`<${PartsModal} onClose=${() => setParts(false)} />` : null}
   </div>`;

@@ -319,3 +319,4 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .chrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .chrow .chn{width:22px;text-align:right}
 .chrow .grow{min-width:180px}
+.page.fitcol>.calwrap{flex:1 1 auto;min-height:0}
