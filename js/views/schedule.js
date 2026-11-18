@@ -136,7 +136,7 @@ export function Schedule() {
   const label = `Semaine du ${ws.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${wEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
   const letters = abEtabs.map(e => weekLetter(e, ws));
   const sameLetter = letters.length > 0 && letters.every(l => l === letters[0]);
-  const abLabel = sameLetter ? ` – Semaine ${letters[0]}` : letters.length ? ' – ' + abEtabs.map((e, i) => `${e.name} : semaine ${letters[i]}`).join(' · ') : '';
+  const abLabel = sameLetter ? `Semaine ${letters[0]}` : letters.length ? abEtabs.map((e, i) => `${e.name} : semaine ${letters[i]}`).join(' · ') : '';
 
   if (!d.classes.length) return html`<div class="page"><${Empty} title="Bienvenue dans Ma classe">
     <p>Commence par créer ou importer tes classes, puis place tes créneaux dans l'emploi du temps.</p>
@@ -149,12 +149,13 @@ export function Schedule() {
 
   return html`<div class="page sched">
     <div class="page-head">
-      <span class="sub wkl">${label}${abLabel}</span><span class="grow"></span>
+      <span class="sub wkl">${abLabel || label}</span><span class="grow"></span>
+      <button class="btn" onClick=${addOneOffButton}>＋ Ajouter</button>
+      <button class=${'btn' + (edit ? ' primary' : '')} onClick=${() => setEdit(!edit)}>${edit ? '✓ Terminer' : '✎ Modifier'}</button>
+      <span style="width:24px"></span>
       <button class="btn" onClick=${() => setWs(addDays(ws, -7))} aria-label="Semaine précédente">‹</button>
       <button class="btn" onClick=${() => setWs(mondayOf(new Date()))}>Aujourd'hui</button>
       <button class="btn" onClick=${() => setWs(addDays(ws, 7))} aria-label="Semaine suivante">›</button>
-      <button class="btn" onClick=${addOneOffButton}>＋ Séance ponctuelle</button>
-      <button class=${'btn' + (edit ? ' primary' : '')} onClick=${() => setEdit(!edit)}>${edit ? '✓ Terminer' : '✎ Modifier'}</button>
     </div>
     ${edit ? html`<p class="hint">Mode édition : touche une zone vide pour ajouter un créneau, ou une séance pour la modifier, l'annuler ou la déplacer <b>uniquement cette semaine</b> (ou pour toutes les semaines).</p>` : null}
     ${!d.slots.length && !edit ? html`<p class="banner">Ton emploi du temps est vide. Touche <b>✎ Modifier</b> puis une zone de la grille pour ajouter un créneau (classe, salle, horaires).</p>` : null}
