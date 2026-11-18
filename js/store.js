@@ -60,10 +60,10 @@ export function defaultData() {
   return {
     v: 1, createdAt: Date.now(), updatedAt: Date.now(), lastBackup: 0,
     settings: { parts: [
-      { id: 'p-nc', name: 'Nombres et calculs', color: '#2f6fed' },
-      { id: 'p-gm', name: 'Grandeurs et mesures', color: '#0f9fa8' },
-      { id: 'p-eg', name: 'Espace et géométrie', color: '#e8731a' },
-      { id: 'p-og', name: 'Organisation et gestion de données, fonctions', color: '#8a4fd0' }], threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
+      { id: 'p-nc', name: 'Nombres et calculs', color: '#4b78b0' },
+      { id: 'p-gm', name: 'Grandeurs et mesures', color: '#5c9a5f' },
+      { id: 'p-eg', name: 'Espace et géométrie', color: '#d08a3e' },
+      { id: 'p-og', name: 'Organisation et gestion de données, fonctions', color: '#bd5a7d' }], threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
     etabs: [
       { id: 'e1', name: 'Établissement 1', type: 'semestre', periods: defaultPeriods('semestre') },
       { id: 'e2', name: 'Établissement 2', type: 'trimestre', periods: defaultPeriods('trimestre') }],
@@ -79,8 +79,9 @@ function migrate(d) {
   d.settings = { ...base.settings, ...d.settings };
   d.notes ||= [];
   // parties du programme : nouvelle palette (si les couleurs d'origine n'ont pas été changées) et suppression d'« Algorithmique » si inutilisée
-  const oldC = { 'p-gm': '#d9822b', 'p-eg': '#2b9a5f' }, newC = { 'p-gm': '#0f9fa8', 'p-eg': '#e8731a' };
-  for (const p of d.settings.parts || []) if (oldC[p.id] === p.color) p.color = newC[p.id];
+  const oldC = { 'p-nc': ['#2f6fed'], 'p-gm': ['#d9822b', '#0f9fa8'], 'p-eg': ['#2b9a5f', '#e8731a'], 'p-og': ['#8a4fd0'] };
+  const newC = { 'p-nc': '#4b78b0', 'p-gm': '#5c9a5f', 'p-eg': '#d08a3e', 'p-og': '#bd5a7d' };
+  for (const p of d.settings.parts || []) if ((oldC[p.id] || []).includes(p.color)) p.color = newC[p.id];
   if (!(d.chapters || []).some(c => c.part === 'p-ap')) d.settings.parts = (d.settings.parts || []).filter(p => p.id !== 'p-ap');
   // v2 : les places deviennent des rectangles verticaux (photo + prénom)
   for (const r of d.rooms) if (r.v !== 2) {
