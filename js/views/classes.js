@@ -187,7 +187,7 @@ function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos, initial }) {
       <button class=${flt === '-' ? 'on P' : ''} onClick=${() => setFlt('-')}>Sans groupe (${studs.filter(s => !s.group).length})</button></div>
       <span class="hint">Touche le badge d'un élève pour changer son groupe.</span></div>` : null}
     ${!studs.length ? html`<${Empty} title="Aucun élève"><p>Importe un fichier CSV/Excel ou colle une liste.</p><//>`
-    : html`<div class="list roster">${list.map(s => html`<div class="item" key=${s.id} onClick=${() => onSheet(s.id)}>
+    : html`<div class="appel-grid roster">${list.map(s => html`<div class="stu" key=${s.id} onClick=${() => onSheet(s.id)}>
       <${Avatar} s=${s} size=${44} /><div class="nm"><b>${s.nom}</b> ${s.prenom}${s.amenagement ? html`<div class="small" style="color:var(--warn)">★ ${s.amenagement}</div>` : null}</div>
       ${groups.length ? html`<button class=${'btn small' + (s.group ? ' on' : '')} style="min-width:56px" onClick=${e => { e.stopPropagation(); cycle(s); }} aria-label="Changer de groupe">${s.group || '—'}</button>` : null}
       <span class="muted">›</span></div>`)}</div>`}

@@ -249,3 +249,8 @@ table.notes .mxa{color:color-mix(in srgb,var(--cc,var(--accent)) 70%,#000);font-
 table.notes td.ev{font-weight:600;font-size:15px;color:var(--text)}
 table.notes tbody tr:nth-child(even) td:not(.moy),table.notes tbody tr:nth-child(even) th.stk{background:color-mix(in srgb,var(--cc,var(--accent)) 8%,var(--card))}
 table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--cc,var(--accent)) 32%,var(--card))}
+
+.roster .stu{cursor:pointer}
+.roster .stu:active{background:var(--soft)}
+.roster .stu .nm{flex:1;min-width:0}
+.roster .stu .nm b{font-weight:700}
