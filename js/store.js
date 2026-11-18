@@ -61,10 +61,9 @@ export function defaultData() {
     v: 1, createdAt: Date.now(), updatedAt: Date.now(), lastBackup: 0,
     settings: { parts: [
       { id: 'p-nc', name: 'Nombres et calculs', color: '#2f6fed' },
-      { id: 'p-gm', name: 'Grandeurs et mesures', color: '#d9822b' },
-      { id: 'p-eg', name: 'Espace et géométrie', color: '#2b9a5f' },
-      { id: 'p-og', name: 'Organisation et gestion de données, fonctions', color: '#8a4fd0' },
-      { id: 'p-ap', name: 'Algorithmique et programmation', color: '#d0476b' }], threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
+      { id: 'p-gm', name: 'Grandeurs et mesures', color: '#0f9fa8' },
+      { id: 'p-eg', name: 'Espace et géométrie', color: '#e8731a' },
+      { id: 'p-og', name: 'Organisation et gestion de données, fonctions', color: '#8a4fd0' }], threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
     etabs: [
       { id: 'e1', name: 'Établissement 1', type: 'semestre', periods: defaultPeriods('semestre') },
       { id: 'e2', name: 'Établissement 2', type: 'trimestre', periods: defaultPeriods('trimestre') }],
@@ -79,6 +78,10 @@ function migrate(d) {
   for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
   d.settings = { ...base.settings, ...d.settings };
   d.notes ||= [];
+  // parties du programme : nouvelle palette (si les couleurs d'origine n'ont pas été changées) et suppression d'« Algorithmique » si inutilisée
+  const oldC = { 'p-gm': '#d9822b', 'p-eg': '#2b9a5f' }, newC = { 'p-gm': '#0f9fa8', 'p-eg': '#e8731a' };
+  for (const p of d.settings.parts || []) if (oldC[p.id] === p.color) p.color = newC[p.id];
+  if (!(d.chapters || []).some(c => c.part === 'p-ap')) d.settings.parts = (d.settings.parts || []).filter(p => p.id !== 'p-ap');
   // v2 : les places deviennent des rectangles verticaux (photo + prénom)
   for (const r of d.rooms) if (r.v !== 2) {
     r.v = 2;
