@@ -97,7 +97,7 @@ function Calendar({ d, levels }) {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
       return html`<div class="cblock" key=${b.ch.id} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
-        <b>${b.ch.title}</b><small>${fmtW(b.ch.weeks || 1)} sem.${p ? ' · ' + p.name : ''}</small>
+        <b>${b.ch.title}</b><small>${fmtW(b.ch.weeks || 1)} sem.</small>
         <div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div></div>`;
     }))}
   </div></div>`;
