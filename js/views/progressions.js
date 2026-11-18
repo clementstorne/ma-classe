@@ -40,6 +40,8 @@ function calWeeks(d) {
 const chIds = x => x.chapterIds || (x.chapterId ? [x.chapterId] : []);
 export const sessionChapters = chIds;
 
+/** Durée d'une séance en « heures de cours » : arrondie à la demi-heure (un créneau de 55 min compte 1 h). */
+const courseH = o => Math.max(0.5, Math.round((toMin(o.end) - toMin(o.start)) / 60 * 2) / 2);
 const R = 20;   // subdivisions verticales d'une semaine : un chapitre occupe la part de la semaine proportionnelle à ses heures de cours
 
 /** Chapitres réellement travaillés d'un niveau, d'après la classe la plus avancée : séances (date, chapitres, heures) et premier/dernier jour par chapitre. */
@@ -52,7 +54,7 @@ function taughtOf(d, lv) {
       const ids = chIds(x).filter(id => id in order); if (!ids.length || x.ds || x.ap) continue;
       const o = x.slotId ? occurrence(d, x.slotId, x.date) : null;
       if (o && o.cancelled) continue;
-      sessions.push({ date: x.date, ids, h: o ? (toMin(o.end) - toMin(o.start)) / 60 : 1 });
+      sessions.push({ date: x.date, ids, h: o ? courseH(o) : 1 });
       for (const id of ids) { const e = per[id] ||= { first: x.date, last: x.date }; if (x.date < e.first) e.first = x.date; if (x.date > e.last) e.last = x.date; }
     }
     const top = Math.max(-1, ...Object.keys(per).map(id => order[id]));
@@ -147,12 +149,12 @@ export function hoursOf(d, classId) {
   for (const x of Object.values(d.sessions)) {
     const ids = chIds(x); if (x.classId !== classId || !ids.length || !x.slotId || x.ds || x.ap) continue;
     const o = occurrence(d, x.slotId, x.date); if (!o || o.cancelled) continue;
-    const h = (toMin(o.end) - toMin(o.start)) / 60;
+    const h = courseH(o);
     for (const id of ids) out[id] = (out[id] || 0) + h / ids.length;
   }
   return out;
 }
-const fmtH = h => (Math.round(h * 4) / 4).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' h';
+const fmtH = h => (Math.round(h * 2) / 2).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' h';
 const STATUS_GLYPH = { doing: '◐', done: '✓' };
 
 function Chips({ d, level, ch, late, hours }) {
