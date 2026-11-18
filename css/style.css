@@ -324,3 +324,5 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .page.fitcol>.chscroll{flex:1 1 auto;min-height:0}
 .chsel{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .cal .cblock.planned{opacity:.62}
+.cal .cblock.short{display:grid;grid-template-columns:1fr auto;grid-template-areas:"s c" "t c";align-content:center;column-gap:6px}
+.cal .cblock.short small{grid-area:s}.cal .cblock.short b{grid-area:t;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal .cblock.short .cps{grid-area:c;margin:0;align-self:center}

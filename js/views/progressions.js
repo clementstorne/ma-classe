@@ -64,6 +64,7 @@ function layout(d, levels) {
   const nowIso = iso(new Date());
   const nowWeek = (weeks.find(w => w.start <= nowIso && nowIso <= w.end) || {}).i;
   const weekOf = date => { const w = weeks.find(w => w.start <= date && date <= w.end); return w ? w.i : (date < (weeks[0] || {}).start ? 0 : weeks.length - 1); };
+  const active = new Set(Object.values(d.sessions).map(x => weekOf(x.date)));
   for (const lv of levels) {
     blocks[lv] = []; over[lv] = 0;
     const chs = chaptersOf(d, lv), t = taughtOf(d, lv);
@@ -76,7 +77,13 @@ function layout(d, levels) {
         const prev = spans[i - 1], next = spans[i + 1];
         let r0 = 2 * x.w0 + (prev && prev.w1 === x.w0 ? 1 : 0), r1 = 2 * x.w1 + (next && next.w0 === x.w1 ? 0 : 1);
         if (r1 < r0) r1 = r0;
-        blocks[lv].push({ ch: x.ch, n: x.n, row0: r0, row1: r1, endWeek: x.w1, cut: false, actual: true });
+        // semaines sans aucun cours saisi (toutes classes) à l'intérieur du chapitre : zone blanche, le bloc est découpé
+        const gap = w => w > x.w0 && w < x.w1 && !weeks[w].vac && !active.has(w);
+        const runs = []; let a = null;
+        for (let w = x.w0; w <= x.w1; w++) { if (gap(w)) { if (a !== null) runs.push([a, w - 1]); a = null; } else if (a === null) a = w; }
+        if (a !== null) runs.push([a, x.w1]);
+        runs.forEach(([ra, rb], j) => blocks[lv].push({ ch: x.ch, n: x.n, row0: ra === x.w0 ? r0 : 2 * ra, row1: rb === x.w1 ? r1 : 2 * rb + 1,
+          endWeek: x.w1, cut: false, actual: true, cont: j > 0, last: j === runs.length - 1 }));
       });
       const lastEnd = Math.max(...spans.map(x => x.w1));
       const from = Math.max(lastEnd + 1, nowWeek === undefined ? 0 : nowWeek);
@@ -145,9 +152,9 @@ function Calendar({ d, levels }) {
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
-      return html`<div class=${'cblock' + (b.planned ? ' planned' : '')} key=${b.ch.id} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
-        <small>Chapitre ${b.n}</small><b>${b.ch.title}</b>
-        <div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div></div>`;
+      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 < 2 ? ' short' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
+        <small>Chapitre ${b.n}${b.cont ? ' (suite)' : ''}</small><b>${b.ch.title}</b>
+        ${b.last === false ? null : html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>`}</div>`;
     }))}
   </div></div>`;
 }
