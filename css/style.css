@@ -268,3 +268,5 @@ table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--c
 .app{overflow:hidden}
 #app{height:100vh;height:100dvh;overflow:hidden}
 .slot:has(.wk) b{padding-right:22px;display:block}
+.tg.on.abs{background:var(--ko);border-color:var(--ko)} .tg.on.ret{background:var(--warn);border-color:var(--warn)}
+.tg.on.abs{background:var(--ko-soft);border-color:var(--ko);border-width:2px} .tg.on.ret{background:var(--warn-soft);border-color:var(--warn);border-width:2px}

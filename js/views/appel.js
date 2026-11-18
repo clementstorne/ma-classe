@@ -4,7 +4,6 @@ import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
 import { fmtDateLong, uid, displayName, seatLabels } from '../util.js';
-import { go } from '../router.js';
 
 export function Appel({ classId, date, slotId }) {
   const d = useStore();
@@ -39,8 +38,8 @@ export function Appel({ classId, date, slotId }) {
   const nA = studs.filter(s => statusOf(s.id) === 'A').length, nR = studs.filter(s => statusOf(s.id) === 'R').length;
 
   const controls = s => html`<div class="ctl">
-    <div class="seg" role="group" aria-label="Présence">${['P', 'A', 'R'].map(st => html`<button class=${(statusOf(s.id) === st ? 'on ' : '') + st} onClick=${() => setMark(s.id, st)}
-      title=${{ P: 'Présent', A: 'Absent', R: 'En retard' }[st]}>${st}</button>`)}</div>
+    <button class=${'tg abs' + (statusOf(s.id) === 'A' ? ' on' : '')} title="Absent" aria-label="Absent" onClick=${() => setMark(s.id, statusOf(s.id) === 'A' ? 'P' : 'A')}>🚫</button>
+    <button class=${'tg ret' + (statusOf(s.id) === 'R' ? ' on' : '')} title="En retard" aria-label="En retard" onClick=${() => setMark(s.id, statusOf(s.id) === 'R' ? 'P' : 'R')}>⏰</button>
     <button class=${'tg dev' + (has(s.id, 'devoir') ? ' on' : '')} title="Travail non fait" aria-label="Travail non fait" onClick=${() => toggle(s.id, 'devoir')}>📝</button>
     <button class=${'tg mat' + (has(s.id, 'materiel') ? ' on' : '')} title="Oubli de matériel" aria-label="Oubli de matériel" onClick=${() => toggle(s.id, 'materiel')}>🎒</button></div>`;
 
@@ -49,13 +48,12 @@ export function Appel({ classId, date, slotId }) {
   const plan = room ? getPlan(d, classId, roomId) : { seatMap: {} };
   const placed = new Set(Object.values(plan.seatMap));
   const unplaced = studs.filter(s => !placed.has(s.id));
-  const back = () => go('/');
 
   return html`<div class="page">
-    <div class="page-head"><button class="btn ghost" onClick=${back}>‹ Emploi du temps</button><h1>Appel · ${cls.name}${slot && slot.group ? ' · ' + slot.group : ''}</h1>
+    <div class="page-head"><h1>Appel · ${cls.name}${slot && slot.group ? ' · ' + slot.group : ''}</h1>
       <span class="sub">${fmtDateLong(date)}${slot ? ' · ' + slot.start + '–' + slot.end : ''}</span><span class="grow"></span>
       <div class="seg"><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button><button class=${view === 'plan' ? 'on P' : ''} onClick=${() => setView('plan')}>Plan</button></div></div>
-    <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">Présents ${studs.length - nA - nR}</span><span class="counter a">Absents ${nA}</span><span class="counter r">Retards ${nR}</span>
+    <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">${studs.length - nA - nR} présent${studs.length - nA - nR > 1 ? 's' : ''}</span><span class="counter a">${nA} absent${nA > 1 ? 's' : ''}</span><span class="counter r">${nR} retard${nR > 1 ? 's' : ''}</span>
       <span class="counter">📝 ${ev('devoir').length}</span><span class="counter">🎒 ${ev('materiel').length}</span></div><span class="grow"></span>
       ${se && se.validated ? html`<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Appel enregistré</span>` : html`<button class="btn primary" onClick=${validate}>✓ Tous présents / valider</button>`}</div>
     ${!studs.length ? html`<${Empty} title=${slot && slot.group ? 'Aucun élève dans le groupe ' + slot.group : 'Aucun élève dans cette classe'}><p>Affecte les élèves à un groupe depuis le dossier de la classe (onglet Élèves).</p><//>` : null}
