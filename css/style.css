@@ -323,3 +323,4 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .chscroll{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;align-content:start;padding-bottom:4px}
 .page.fitcol>.chscroll{flex:1 1 auto;min-height:0}
 .chsel{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cal .cblock.planned{opacity:.62}

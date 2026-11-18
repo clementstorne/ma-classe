@@ -36,32 +36,65 @@ function calWeeks(d) {
   return out;
 }
 
-/** Place les chapitres de chaque niveau à la suite sur les semaines non vacantes, par demi-semaines. */
+const chIds = x => x.chapterIds || (x.chapterId ? [x.chapterId] : []);
+export const sessionChapters = chIds;
+
+/** Chapitres réellement travaillés d'un niveau, d'après la classe la plus avancée : { id → {first, last} } (dates des séances). */
+function taughtOf(d, lv) {
+  const chs = chaptersOf(d, lv), order = Object.fromEntries(chs.map((c, i) => [c.id, i]));
+  let best = null;
+  for (const c of d.classes.filter(c => levelOf(c) === lv)) {
+    const per = {};
+    for (const x of Object.values(d.sessions)) if (x.classId === c.id) for (const id of chIds(x)) if (id in order) {
+      const e = per[id] ||= { first: x.date, last: x.date };
+      if (x.date < e.first) e.first = x.date; if (x.date > e.last) e.last = x.date;
+    }
+    const top = Math.max(-1, ...Object.keys(per).map(id => order[id]));
+    const n = Object.keys(per).length;
+    if (n && (!best || top > best.top || (top === best.top && n > best.n))) best = { per, top, n };
+  }
+  return best;
+}
+
+/** Place les chapitres de chaque niveau : ceux déjà travaillés sur leurs vraies semaines, les autres à la suite (demi-semaines, hors vacances). */
 function layout(d, levels) {
   const weeks = calWeeks(d);
   const usable = weeks.filter(w => !w.vac).map(w => w.i);
   const blocks = {}, over = {};
   const nowIso = iso(new Date());
   const nowWeek = (weeks.find(w => w.start <= nowIso && nowIso <= w.end) || {}).i;
+  const weekOf = date => { const w = weeks.find(w => w.start <= date && date <= w.end); return w ? w.i : (date < (weeks[0] || {}).start ? 0 : weeks.length - 1); };
   for (const lv of levels) {
-    let cur = 0; blocks[lv] = []; over[lv] = 0;
-    let n = 0;
-    for (const ch of chaptersOf(d, lv)) {
-      n++;
+    blocks[lv] = []; over[lv] = 0;
+    const chs = chaptersOf(d, lv), t = taughtOf(d, lv);
+    const done = [], rest = [];
+    chs.forEach((ch, n) => (t && t.per[ch.id] ? done : rest).push({ ch, n: n + 1 }));
+    let cur = 0;
+    if (t) {
+      const spans = done.map(x => ({ ...x, w0: weekOf(t.per[x.ch.id].first), w1: weekOf(t.per[x.ch.id].last) }));
+      spans.forEach((x, i) => {
+        const prev = spans[i - 1], next = spans[i + 1];
+        let r0 = 2 * x.w0 + (prev && prev.w1 === x.w0 ? 1 : 0), r1 = 2 * x.w1 + (next && next.w0 === x.w1 ? 0 : 1);
+        if (r1 < r0) r1 = r0;
+        blocks[lv].push({ ch: x.ch, n: x.n, row0: r0, row1: r1, endWeek: x.w1, cut: false, actual: true });
+      });
+      const lastEnd = Math.max(...spans.map(x => x.w1));
+      const from = Math.max(lastEnd + 1, nowWeek === undefined ? 0 : nowWeek);
+      const k = usable.findIndex(w => w >= from);
+      cur = 2 * (k < 0 ? usable.length : k);
+    }
+    for (const { ch, n } of rest) {
       const h = Math.max(1, Math.round((ch.weeks || 1) * 2));
       const k0 = cur, k1 = cur + h - 1; cur += h;
       const w0 = usable[Math.floor(k0 / 2)], w1 = usable[Math.floor(k1 / 2)];
       if (w0 === undefined) { over[lv]++; continue; }
       const last = w1 === undefined ? usable[usable.length - 1] : w1;
       if (w1 === undefined) over[lv]++;
-      blocks[lv].push({ ch, n, row0: 2 * w0 + (k0 % 2), row1: w1 === undefined ? 2 * last + 1 : 2 * w1 + (k1 % 2), endWeek: last, cut: w1 === undefined });
+      blocks[lv].push({ ch, n, row0: 2 * w0 + (k0 % 2), row1: w1 === undefined ? 2 * last + 1 : 2 * w1 + (k1 % 2), endWeek: last, cut: w1 === undefined, actual: false, planned: !!t });
     }
   }
   return { weeks, blocks, over, nowWeek };
 }
-
-const chIds = x => x.chapterIds || (x.chapterId ? [x.chapterId] : []);
-export const sessionChapters = chIds;
 
 /** Avancement d'une classe, déduit des séances : le chapitre le plus avancé de la dernière séance est « en cours », tous les autres chapitres travaillés sont « terminés ». */
 export function progressOf(d, classId, excludeKey) {
@@ -112,7 +145,7 @@ function Calendar({ d, levels }) {
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
-      return html`<div class="cblock" key=${b.ch.id} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
+      return html`<div class=${'cblock' + (b.planned ? ' planned' : '')} key=${b.ch.id} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
         <small>Chapitre ${b.n}</small><b>${b.ch.title}</b>
         <div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div></div>`;
     }))}
