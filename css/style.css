@@ -320,3 +320,5 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .chrow .chn{width:22px;text-align:right}
 .chrow .grow{min-width:180px}
 .page.fitcol>.calwrap{flex:1 1 auto;min-height:0}
+.chscroll{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;align-content:start;padding-bottom:4px}
+.page.fitcol>.chscroll{flex:1 1 auto;min-height:0}

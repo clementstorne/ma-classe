@@ -126,7 +126,7 @@ function ChapterList({ d, level }) {
   const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const x of Object.values(dd.sessions)) if (x.chapterId === ch.id) delete x.chapterId; }); };
   const total = list.reduce((n, c) => n + (c.weeks || 1), 0);
   if (!list.length) return html`<${Empty} title=${'Aucun chapitre en ' + level} />`;
-  return html`<div class="list">${list.map((ch, i) => {
+  return html`<div class="list chscroll">${list.map((ch, i) => {
     const p = parts.find(x => x.id === ch.part);
     return html`<div class="item chrow" key=${ch.id} style=${{ cursor: 'default', borderLeft: '6px solid ' + (p ? p.color : 'var(--line)') }}>
       <span class="muted chn">${i + 1}</span>
@@ -181,7 +181,7 @@ export function Progressions() {
       toast(n ? `${n} chapitres importés.` : 'Aucun nouveau chapitre.');
     } catch (err) { alert(err.message || err); }
   }
-  return html`<div class=${'page' + (view === 'cal' ? ' fitcol' : '')}>
+  return html`<div class="page fitcol">
     <div class="page-head">
       <div class="seg"><button class=${view === 'cal' ? 'on P' : ''} onClick=${() => setView('cal')}>Calendrier</button><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Chapitres</button></div>
       <span class="grow"></span>
