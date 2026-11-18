@@ -303,7 +303,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .cal .ch{position:sticky;top:0;z-index:6;background:var(--soft);border-bottom:1px solid var(--line);border-left:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700}
 .cal .ch-w{border-left:0;justify-content:flex-start;padding-left:12px;color:var(--muted);font-size:13px}
 .cal .cw{padding:4px 10px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--card);position:sticky;left:0;z-index:3}
-.cal .cab{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);border-left:1px solid var(--line);background:var(--card);position:sticky;left:172px;z-index:3}
+.cal .cab{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);border-left:1px solid var(--line);background:var(--card);position:sticky;left:0;z-index:3}
 .cal .cbg{border-bottom:1px solid var(--line)}
 .cal .cbg.now,.cal .cw.cal-now,.cal .cab.cal-now2{background:var(--accent-soft)}
 .cal .cw.cal-now{color:var(--accent);font-weight:700}
@@ -340,3 +340,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .cal .cw{flex-direction:row;align-items:center;gap:8px}.cal .cw .wn{min-width:22px;text-align:right;font-weight:700;color:var(--text-primary);font-size:13px}
 .cal .cblock.tiny{padding:0 8px;flex-direction:row;align-items:center;display:flex;gap:6px}.cal .cblock.tiny small,.cal .cblock.tiny b{display:none}.cal .cblock.tiny .cps{margin:0 0 0 auto}
 .cal .cw span:last-child{white-space:nowrap}
+.cal .cn{position:sticky;left:0;z-index:3;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--text-primary)}
+.cal .cn.cal-now{background:var(--accent-soft);color:var(--accent)}
+.cal .cw .wn{display:none}
+.cal .cw{flex-direction:column;align-items:flex-start;gap:0}

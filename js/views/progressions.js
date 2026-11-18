@@ -175,17 +175,19 @@ function Calendar({ d, levels }) {
     if (el) wrap.current.scrollTop = Math.max(0, el.offsetTop - 140);
   }, [levels.join(',')]);
   const ab = d.etabs.find(e => e.ab && e.abRef);
-  const gcol = i => i + 3;
+  const gcol = i => i + 4;
+  const nw = Math.max(30, 14 + 9 * String(weeks.length).length), dw = 140;
   const vacSpan = w => { let n = 1; while (weeks[w.i + n]?.vac === w.vac) n++; return n; };
-  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `172px 34px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: 206 + 170 * levels.length + "px" }}>
-    <div class="ch ch-w" style="grid-row:1;grid-column:1/3">Semaine</div>
+  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `${nw}px ${dw}px ${ab ? 34 : 0}px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: nw + dw + (ab ? 34 : 0) + 170 * levels.length + "px" }}>
+    <div class="ch ch-w" style="grid-row:1;grid-column:1/4">Semaine</div>
     ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
     ${weeks.map(w => {
       const r = R * w.i + 2, now = w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
-      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 1 }}><span class="wn">${w.i + 1}</span><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
-        <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 2 }}>${w.vac ? '' : L || ''}</div>
-        <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: `3 / ${levels.length + 3}` }}></div>
-        ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${R * vacSpan(w)}`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
+      return html`<div key=${'n' + w.i} class=${'cn' + (now ? ' cal-now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 1 }}>${w.i + 1}</div>
+        <div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 2, left: nw + 'px' }}><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
+        <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 3, left: nw + dw + 'px' }}>${w.vac ? '' : L || ''}</div>
+        <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: `4 / ${levels.length + 4}` }}></div>
+        ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${R * vacSpan(w)}`, gridColumn: `4 / ${levels.length + 4}` }}>${w.vac}</div>` : null}`;
     })}
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
