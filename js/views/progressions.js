@@ -1,7 +1,7 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, sortedClasses, holidayOn, weekLetter } from '../store.js';
-import { Modal, Field, Empty, toast } from './common.js';
-import { uid, iso, fromISO, addDays, mondayOf, fmtDateShort, classColor, textOn } from '../util.js';
+import { useStore, mutate, sortedClasses, holidayOn, weekLetter, occurrence } from '../store.js';
+import { Modal, Field, Empty } from './common.js';
+import { toMin, uid, iso, fromISO, addDays, mondayOf, fmtDateShort, classColor, textOn } from '../util.js';
 import { Ico } from '../icons.js';
 
 export const LEVELS = ['6e', '5e', '4e', '3e', '2de', '1re', 'Tle'];
@@ -12,7 +12,7 @@ export const levelOf = c => {
   return m ? m[2] + 'e' : '';
 };
 const levelRank = l => { const i = LEVELS.indexOf(l); return i < 0 ? 99 : i; };
-const WEEK_OPTS = Array.from({ length: 24 }, (_, i) => (i + 1) / 2);
+const WEEK_OPTS = [0.5, 1, 1.5, 2, 2.5, 3];
 const fmtL = x => fromISO(x).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 const fmtW = w => String(w).replace('.', ',');
 
@@ -126,14 +126,26 @@ const cycle = (d, cid, chid) => {
   const auto = progressOf(d, cid, null, true)[chid] || null;
   mutate(dd => { const k = cid + '|' + chid; if (nx === auto) delete dd.progress[k]; else dd.progress[k] = nx || 'todo'; });
 };
+/** Heures de cours réellement faites par chapitre pour une classe (durée des créneaux des séances ; réparties à parts égales si plusieurs chapitres). */
+export function hoursOf(d, classId) {
+  const out = {};
+  for (const x of Object.values(d.sessions)) {
+    const ids = chIds(x); if (x.classId !== classId || !ids.length || !x.slotId) continue;
+    const o = occurrence(d, x.slotId, x.date); if (!o || o.cancelled) continue;
+    const h = (toMin(o.end) - toMin(o.start)) / 60;
+    for (const id of ids) out[id] = (out[id] || 0) + h / ids.length;
+  }
+  return out;
+}
+const fmtH = h => (Math.round(h * 4) / 4).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' h';
 const STATUS_GLYPH = { doing: '◐', done: '✓' };
 
-function Chips({ d, level, ch, late }) {
+function Chips({ d, level, ch, late, hours }) {
   const cls = sortedClasses(d).filter(c => levelOf(c) === level);
   return html`${cls.map(c => {
-    const st = progressOf(d, c.id)[ch.id];
+    const st = progressOf(d, c.id)[ch.id], h = hours ? hoursOf(d, c.id)[ch.id] : 0;
     return html`<button key=${c.id} class=${'cp' + (st ? ' ' + st : '') + (late && st !== 'done' ? ' late' : '')} style=${{ '--cc': classColor(c) }}
-      title=${{ doing: 'En cours', done: 'Terminé' }[st] || 'À venir'} onClick=${e => { e.stopPropagation(); cycle(d, c.id, ch.id); }}>${c.name}${st ? ' ' + STATUS_GLYPH[st] : ''}</button>`;
+      title=${{ doing: 'En cours', done: 'Terminé' }[st] || 'À venir'} onClick=${e => { e.stopPropagation(); cycle(d, c.id, ch.id); }}>${c.name}${st ? ' ' + STATUS_GLYPH[st] : ''}${h ? ' · ' + fmtH(h) : ''}</button>`;
   })}`;
 }
 
@@ -150,12 +162,12 @@ function Calendar({ d, levels }) {
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 3;
   const vacSpan = w => { let n = 1; while (weeks[w.i + n]?.vac === w.vac) n++; return n; };
-  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `128px 34px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: 162 + 170 * levels.length + "px" }}>
+  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `150px 34px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: 184 + 170 * levels.length + "px" }}>
     <div class="ch ch-w" style="grid-row:1;grid-column:1/3">Semaine</div>
     ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
     ${weeks.map(w => {
       const r = 2 * w.i + 2, now = w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
-      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 1 }}>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</div>
+      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 1 }}><span class="wn">${w.i + 1}</span><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
         <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 2 }}>${w.vac ? '' : L || ''}</div>
         <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: `3 / ${levels.length + 3}` }}></div>
         ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${2 * vacSpan(w)}`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
@@ -190,8 +202,8 @@ function ChapterList({ d, level }) {
       <span class="muted chn">${i + 1}</span>
       <input class="inp grow" value=${ch.title} onInput=${e => set(ch.id, { title: e.target.value })} aria-label="Titre du chapitre" />
       <select class="inp" value=${ch.part || ''} onChange=${e => set(ch.id, { part: e.target.value })}><option value="">Sans partie</option>${parts.map(x => html`<option value=${x.id}>${x.name}</option>`)}</select>
-      <select class="inp" value=${ch.weeks || 1} onChange=${e => set(ch.id, { weeks: Number(e.target.value) })}>${WEEK_OPTS.map(w => html`<option value=${w}>${fmtW(w)} sem.</option>`)}</select>
-      <span class="cps"><${Chips} d=${d} level=${level} ch=${ch} late=${false} /></span>
+      <select class="inp" value=${ch.weeks || 1} onChange=${e => set(ch.id, { weeks: Number(e.target.value) })}>${(WEEK_OPTS.includes(ch.weeks) ? WEEK_OPTS : [...WEEK_OPTS, ch.weeks]).map(w => html`<option value=${w}>${fmtW(w)} sem.</option>`)}</select>
+      <span class="cps"><${Chips} d=${d} level=${level} ch=${ch} late=${false} hours=${true} /></span>
       <button class="btn small" disabled=${i === 0} onClick=${() => move(ch.id, -1)} aria-label="Monter">↑</button>
       <button class="btn small" disabled=${i === list.length - 1} onClick=${() => move(ch.id, 1)} aria-label="Descendre">↓</button>
       <button class="btn small danger" onClick=${() => del(ch)}>Supprimer</button></div>`;
@@ -217,34 +229,16 @@ export function Progressions() {
   const [view, setView] = useState('cal');
   const [lvl, setLvl] = useState('');
   const [parts, setParts] = useState(false);
-  const file = useRef();
   const level = levels.includes(lvl) ? lvl : levels[0];
   function addChapter() {
     if (!level) return;
     mutate(dd => dd.chapters.push({ id: uid(), level, title: 'Nouveau chapitre', weeks: 1, part: '' }));
   }
-  async function onImport(e) {
-    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-    try {
-      const o = JSON.parse(await f.text());
-      if (!o || !Array.isArray(o.chapters)) throw new Error('Fichier de chapitres non reconnu.');
-      let n = 0;
-      mutate(dd => {
-        for (const c of o.chapters) {
-          if (!c.level || !c.title || dd.chapters.some(x => x.level === c.level && x.title === c.title)) continue;
-          const p = dd.settings.parts.find(x => x.name === c.part);
-          dd.chapters.push({ id: uid(), level: c.level, title: c.title, weeks: Number(c.weeks) || 1, part: p ? p.id : '' }); n++;
-        }
-      });
-      toast(n ? `${n} chapitres importés.` : 'Aucun nouveau chapitre.');
-    } catch (err) { alert(err.message || err); }
-  }
   return html`<div class="page fitcol">
     <div class="page-head">
-      <div class="seg"><button class=${view === 'cal' ? 'on P' : ''} onClick=${() => setView('cal')}>Calendrier</button><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Chapitres</button></div>
+      <div class="seg"><button class=${view === 'cal' ? 'on P' : ''} onClick=${() => setView('cal')}>Calendrier</button><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button></div>
       <span class="grow"></span>
       <button class="btn" onClick=${() => setParts(true)}>${Ico('layout')} Parties du programme</button>
-      <button class="btn" onClick=${() => file.current.click()}>${Ico('download')} Importer des chapitres</button><input ref=${file} type="file" accept=".json,application/json" hidden onChange=${onImport} />
       ${view === 'list' ? html`<button class="btn primary" disabled=${!level} onClick=${addChapter}>${Ico('plus')} Ajouter un chapitre</button>` : null}</div>
     ${view === 'list' && levels.length ? html`<div class="tabs">${levels.map(l => html`<a key=${l} class=${l === level ? 'on' : ''} href="javascript:void 0" onClick=${e => { e.preventDefault(); setLvl(l); }}>${l} <span class="muted">(${chaptersOf(d, l).length})</span></a>`)}</div>` : null}
     ${!levels.length ? html`<${Empty} title="Aucune classe" />`
