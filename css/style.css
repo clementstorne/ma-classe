@@ -208,7 +208,6 @@ a.btn{text-decoration:none;color:inherit}a.btn.primary{color:var(--accent-ink)}
 
 input.inp.bad{border-color:var(--ko);background:var(--ko-soft)}
 .slot.cancelled{opacity:.45;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 6px,transparent 6px 12px)!important}
-.slot.cancelled b{text-decoration:line-through}
 .slot .note{font-weight:600;opacity:.9;text-decoration:none;display:inline-block}
 .slot.cancelled{color:var(--ink)!important}
 

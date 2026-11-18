@@ -171,7 +171,7 @@ export function Schedule() {
           const c = classById(d, o.classId), room = roomById(d, o.roomId);
           const nAbs = se ? Object.values(se.marks).filter(m => m === 'A').length : 0;
           const bg = colorOf(o.classId);
-          const note = o.cancelled ? 'annulée' : o.oneOff ? 'ponctuelle' : o.modified ? 'modifiée' : '';
+          const note = !o.cancelled && o.oneOff ? 'ponctuelle' : '';
           return html`<button class=${'slot' + (o.cancelled ? ' cancelled' : '')} key=${o.id} style=${{ background: bg, color: textOn(bg), top: (toMin(o.start) - gStart) * PPM + 'px', height: (toMin(o.end) - toMin(o.start)) * PPM - 2 + 'px' }}
             onClick=${e => { e.stopPropagation(); openOcc(o); }}>
             <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${room ? html` <small>· ${room.name}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
