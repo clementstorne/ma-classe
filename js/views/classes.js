@@ -177,11 +177,10 @@ function PlansList({ cls }) {
     ${!made.length ? html`<${Empty} title="Aucun plan de classe"><p>Ajoute un plan en choisissant l'une des salles de l'établissement.</p><//>`
     : html`<div class="plan-cards">${made.map(x => {
         const r = roomById(d, x.roomId), p = d.plans[x.k];
-        const n = Object.values(p.seatMap).filter(sid => d.students.some(s => s.id === sid)).length;
         return html`<div class="card plan-card" key=${x.k} onClick=${() => go(`/plan/${cls.id}/${r.id}` + (x.group ? '?g=' + encodeURIComponent(x.group) : ''))}>
           <${PlanThumb} room=${r} seatMap=${p.seatMap} />
           <div class="row" style="margin-top:10px"><div class="grow"><b>${r.name}${x.group ? ' · ' + x.group : ''}</b>
-            <div class="muted small">${r.items.filter(i => i.kind === 'seat').length} places · ${n} élève(s) placé(s)</div></div>
+            <div class="muted small">${r.items.filter(i => i.kind === 'seat').length} places</div></div>
             <button class="btn small danger" onClick=${e => { e.stopPropagation(); remove(x); }}>Supprimer</button></div></div>`;
       })}</div>`}
     ${add ? html`<${Modal} title="Ajouter un plan de classe" onClose=${() => setAdd(null)}

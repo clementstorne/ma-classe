@@ -95,15 +95,15 @@ export function NotesTab({ cls }) {
 
   return html`<div class="row" style="margin-bottom:12px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
       <span class="grow"></span>
-      <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>${Ico('plus')} Ajouter une note</button>
+      <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>${Ico('plus')} Ajouter un devoir</button>
       <button class="btn" onClick=${() => setImp(true)}>${Ico('download')} Importer des notes</button></div>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
-    : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
+    : !cols.length ? html`<${Empty} title="Aucun devoir sur cette période"><p>Ajoute un devoir avec « Ajouter un devoir », ou crée une évaluation détaillée.</p><//>`
     : html`<div class="gridwrap"><table class="g notes" ref=${tbl} style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>
       <colgroup><col style=${{ width: FIRST_W + 'px' }} /><col style=${{ width: COL_W + 'px' }} />${cols.map(() => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       <thead><tr><th class="stk">Élève</th><th class="moy" style="height:58px">Moyenne<br /><small>/20</small></th>${cols.map(c => html`<th key=${c.id} style="height:58px;cursor:pointer;line-height:1.25"
           onClick=${() => c.kind === 'eval' ? go('/eval/' + c.id) : setForm({ id: c.id, name: c.name, date: c.date, max: String(c.max) })}
-          title=${c.kind === 'eval' ? 'Ouvrir l\'évaluation' : 'Modifier la note'}>
+          title=${c.kind === 'eval' ? 'Ouvrir l\'évaluation' : 'Modifier le devoir'}>
           <div style="overflow:hidden;text-overflow:ellipsis">${c.kind === 'eval' ? '📋 ' : ''}${c.name}</div>
           <small class="muted">${fmtDateShort(c.date)} · /${fmtNum(c.max)}</small></th>`)}</tr>
         <tr><th class="stk" style="height:36px">Coef.</th><th class="moy" style="height:36px"></th>${cols.map(c => html`<th key=${c.id + coefOf(c)} style="height:36px;padding:0"><input class="cellin" style="min-height:34px" inputmode="decimal" defaultValue=${fmtNum(coefOf(c))} aria-label=${'Coefficient ' + c.name}
@@ -119,7 +119,7 @@ export function NotesTab({ cls }) {
       })}</tr>`)}</tbody>
       <tfoot><tr><th class="stk">Moyenne</th><td class="moy">${moyClasse}</td>${cols.map(c => html`<td>${avg(c)}</td>`)}</tr></tfoot></table></div>`}
     ${imp ? html`<${PronoteImport} cls=${cls} onClose=${() => setImp(false)} onDone=${() => setPer('all')} />` : null}
-    ${form ? html`<${Modal} title=${form.id ? 'Modifier la note' : 'Nouvelle note'} onClose=${() => setForm(null)}
+    ${form ? html`<${Modal} title=${form.id ? 'Modifier le devoir' : 'Nouveau devoir'} onClose=${() => setForm(null)}
       foot=${html`${form.id ? html`<button class="btn danger" onClick=${del}>Supprimer</button>` : null}<span class="grow"></span><button class="btn" onClick=${() => setForm(null)}>Annuler</button><button class="btn primary" onClick=${save}>Enregistrer</button>`}>
       <${Field} label="Nom (ex. Interro, Leçon, Oral…)"><input value=${form.name} autofocus onInput=${e => setForm({ ...form, name: e.target.value })} /><//>
       <div class="row"><${Field} label="Date"><input type="date" value=${form.date} onInput=${e => setForm({ ...form, date: e.target.value })} /><//>
