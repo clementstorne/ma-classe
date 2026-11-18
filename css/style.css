@@ -299,7 +299,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 /* progressions */
 .calwrap{flex:1;min-height:0;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);-webkit-overflow-scrolling:touch}
 .page:not(.fitcol) .calwrap{max-height:none}
-.cal{display:grid;grid-auto-rows:28px;grid-template-rows:42px;position:relative;min-width:max-content}
+.cal{display:grid;grid-auto-rows:28px;grid-template-rows:42px;position:relative;min-width:0}
 .cal .ch{position:sticky;top:0;z-index:6;background:var(--soft);border-bottom:1px solid var(--line);border-left:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700}
 .cal .ch-w{border-left:0;justify-content:flex-start;padding-left:12px;color:var(--muted);font-size:13px}
 .cal .cw{padding:4px 10px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--card);position:sticky;left:0;z-index:3}
@@ -329,3 +329,6 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .cal .cblock.ct{border-top-left-radius:0;border-top-right-radius:0;margin-top:0}
 .cal .cblock.cb{border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0}
 .cp{cursor:pointer}
+.cal .cps{justify-content:flex-end;margin-left:auto;align-self:flex-end}
+.cal .cblock.cont{justify-content:flex-end}
+.cal .cw{line-height:1.25;display:flex;flex-direction:column;justify-content:center}

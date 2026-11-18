@@ -13,6 +13,7 @@ export const levelOf = c => {
 };
 const levelRank = l => { const i = LEVELS.indexOf(l); return i < 0 ? 99 : i; };
 const WEEK_OPTS = Array.from({ length: 24 }, (_, i) => (i + 1) / 2);
+const fmtL = x => fromISO(x).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 const fmtW = w => String(w).replace('.', ',');
 
 function levelsOf(d) {
@@ -149,12 +150,12 @@ function Calendar({ d, levels }) {
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 3;
   const vacSpan = w => { let n = 1; while (weeks[w.i + n]?.vac === w.vac) n++; return n; };
-  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `128px 34px repeat(${levels.length}, minmax(170px, 1fr))` }}>
+  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `128px 34px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: 162 + 170 * levels.length + "px" }}>
     <div class="ch ch-w" style="grid-row:1;grid-column:1/3">Semaine</div>
     ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
     ${weeks.map(w => {
       const r = 2 * w.i + 2, now = w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
-      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 1 }}>${fmtDateShort(w.start)} – ${fmtDateShort(w.end)}</div>
+      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 1 }}>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</div>
         <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 2 }}>${w.vac ? '' : L || ''}</div>
         <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: `3 / ${levels.length + 3}` }}></div>
         ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${2 * vacSpan(w)}`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
@@ -162,8 +163,8 @@ function Calendar({ d, levels }) {
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
-      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 < 2 ? ' short' : '') + (b.cont ? ' ct' : '') + (b.last === false ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
-        <small>Chapitre ${b.n}${b.cont ? ' (suite)' : ''}</small><b>${b.ch.title}</b>
+      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 < 2 ? ' short' : '') + (b.cont ? ' ct cont' : '') + (b.last === false ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
+        ${b.cont ? null : html`<small>Chapitre ${b.n}</small><b>${b.ch.title}</b>`}
         ${b.last === false ? null : html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>`}</div>`;
     }))}
   </div></div>`;
