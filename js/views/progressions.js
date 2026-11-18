@@ -82,6 +82,7 @@ function Calendar({ d, levels }) {
   }, [levels.join(',')]);
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 3;
+  const vacSpan = w => { let n = 1; while (weeks[w.i + n]?.vac === w.vac) n++; return n; };
   return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `128px 34px repeat(${levels.length}, minmax(170px, 1fr))` }}>
     <div class="ch ch-w" style="grid-row:1;grid-column:1/3">Semaine</div>
     ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
@@ -90,7 +91,7 @@ function Calendar({ d, levels }) {
       return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 1 }}>${fmtDateShort(w.start)} – ${fmtDateShort(w.end)}</div>
         <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 2 }}>${w.vac ? '' : L || ''}</div>
         <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: `3 / ${levels.length + 3}` }}></div>
-        ${w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span 2`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
+        ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${2 * vacSpan(w)}`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
     })}
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
