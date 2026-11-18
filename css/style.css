@@ -244,3 +244,8 @@ table.notes tfoot td.moy{z-index:4;color:var(--text)}
 table.notes td.cw{position:relative}
 table.notes .mxa{position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:1;font-size:10px;font-weight:500;color:var(--muted);pointer-events:none}
 table.notes td.cw{padding-right:22px}
+
+table.notes .mxa{color:color-mix(in srgb,var(--cc,var(--accent)) 70%,#000);font-weight:600}
+table.notes td.ev{font-weight:600;font-size:15px;color:var(--text)}
+table.notes tbody tr:nth-child(even) td:not(.moy),table.notes tbody tr:nth-child(even) th.stk{background:color-mix(in srgb,var(--cc,var(--accent)) 8%,var(--card))}
+table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--cc,var(--accent)) 32%,var(--card))}

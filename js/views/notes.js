@@ -106,7 +106,7 @@ export function NotesTab({ cls }) {
       <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th><td class="moy">${(m => m == null ? '' : f10(m))(moyenne(s))}</td>${cols.map(c => {
         const v = value(c, s), mx = c.kind === 'eval' ? studentStats(c.ev, s.id, d.settings.comps, s).noteMax : c.max;
         const sfx = typeof v === 'number' ? html`<span class="mxa">/${fmtNum(mx)}</span>` : null;
-        if (c.kind === 'eval') return html`<td class="tot cw" style="cursor:pointer" onClick=${() => go('/eval/' + c.id)}>${v === 'abs' ? 'Abs' : v == null ? '' : f1(v)}${sfx}</td>`;
+        if (c.kind === 'eval') return html`<td class="cw ev" style="cursor:pointer" onClick=${() => go('/eval/' + c.id)}>${v === 'abs' ? 'Abs' : v == null ? '' : f1(v)}${sfx}</td>`;
         return html`<td class="cw" key=${c.id + s.id + v}><input class="cellin" inputmode="decimal" defaultValue=${v === 'abs' ? 'Abs' : v == null ? '' : fmtNum(v)} aria-label=${c.name + ' ' + lab[s.id]}
           onFocus=${e => e.target.select()}
           onBlur=${e => { if (!setScore(c.n, s.id, e.target.value)) e.target.classList.add('bad'); }}
