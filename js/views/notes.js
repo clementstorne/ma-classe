@@ -44,7 +44,12 @@ export function NotesTab({ cls }) {
 
   const moyenne = s => {
     let num = 0, den = 0;
-    for (const c of cols) { const v = value(c, s), k = coefOf(c); if (typeof v === 'number' && k > 0) { num += v * k; den += k; } }
+    for (const c of cols) {
+      const v = value(c, s), k = coefOf(c);
+      if (typeof v !== 'number' || !(k > 0)) continue;
+      const mx = c.kind === 'eval' ? studentStats(c.ev, s.id, d.settings.comps, s).noteMax : c.max; // chaque note est ramenée sur 20 pour la moyenne
+      if (mx > 0) { num += v / mx * 20 * k; den += k; }
+    }
     return den ? num / den : null;
   };
   const moys = studs.map(moyenne).filter(x => x != null);
@@ -83,7 +88,7 @@ export function NotesTab({ cls }) {
       ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>＋ Note</button>
       <button class="btn" onClick=${() => setImp(true)}>⬆ Importer (Pronote)</button></div>
-    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne pondère les notes telles qu'elles sont saisies (non ramenées sur 20) et ignore les absents.</p>
+    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20) ramène chaque note sur 20, applique les coefficients et ignore les absents.</p>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
     : html`<div class="gridwrap"><table class="g" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px' }}>
@@ -92,7 +97,7 @@ export function NotesTab({ cls }) {
           onClick=${() => c.kind === 'eval' ? go('/eval/' + c.id) : setForm({ id: c.id, name: c.name, date: c.date, max: String(c.max) })}
           title=${c.kind === 'eval' ? 'Ouvrir l\'évaluation' : 'Modifier la note'}>
           <div style="overflow:hidden;text-overflow:ellipsis">${c.kind === 'eval' ? '📋 ' : ''}${c.name}</div>
-          <small class="muted">${fmtDateShort(c.date)} · /${fmtNum(c.max)}</small></th>`)}<th class="tot" style="height:58px">Moyenne<br /><small class="muted">pondérée</small></th></tr>
+          <small class="muted">${fmtDateShort(c.date)} · /${fmtNum(c.max)}</small></th>`)}<th class="tot" style="height:58px">Moyenne<br /><small class="muted">/20</small></th></tr>
         <tr><th class="stk" style="height:36px">Coef.</th>${cols.map(c => html`<th key=${c.id + coefOf(c)} style="height:36px;padding:0"><input class="cellin" style="min-height:34px" inputmode="decimal" defaultValue=${fmtNum(coefOf(c))} aria-label=${'Coefficient ' + c.name}
           onFocus=${e => e.target.select()} onBlur=${e => { if (!setCoef(c, e.target.value)) e.target.classList.add('bad'); }} onKeyDown=${e => { if (e.key === 'Enter') e.target.blur(); }} /></th>`)}<th class="tot" style="height:36px"></th></tr></thead>
       <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th>${cols.map(c => {
@@ -156,6 +161,8 @@ function PronoteImport({ cls, onClose, onDone }) {
   const [err, setErr] = useState('');
   const classStuds = studentsOf(d, cls.id);
   const find = (list, h) => list.find(s => norm(s.nom + ' ' + s.prenom) === norm(h.nom + ' ' + h.prenom));
+  const hasScores = o => Object.keys(o.scores || {}).length > 0;
+  const conflict = dv => d.evals.some(e => e.classId === cls.id && e.date === dv.date && hasScores(e)) || d.notes.some(n => n.classId === cls.id && n.date === dv.date && hasScores(n));
   const missing = data ? data.studs.filter(h => !find(classStuds, h)) : [];
 
   async function onFile(e) {
@@ -163,12 +170,12 @@ function PronoteImport({ cls, onClose, onDone }) {
     if (!f) return;
     try {
       const r = parsePronote(await readTable(f));
-      setErr(''); setData(r); setSel(Object.fromEntries(r.devoirs.map(x => [x.j, x.n > 0])));
+      setErr(''); setData(r); setSel(Object.fromEntries(r.devoirs.map(x => [x.j, x.n > 0 && !conflict(x)])));
       setAddMissing(!classStuds.length);
     } catch (x) { setErr(String(x.message || x)); }
   }
   function doImport() {
-    let created = 0, updated = 0;
+    let created = 0, updated = 0, skipped = 0;
     mutate(dd => {
       const cs = dd.students.filter(s => s.classId === cls.id);
       const ids = {};
@@ -180,13 +187,15 @@ function PronoteImport({ cls, onClose, onDone }) {
       for (const dv of data.devoirs) {
         if (!sel[dv.j]) continue;
         const name = 'Note du ' + dv.date.slice(8) + '/' + dv.date.slice(5, 7);
-        let n = dd.notes.find(x => x.classId === cls.id && x.date === dv.date && x.name === name);
+        // un devoir déjà noté à cette date n'est jamais écrasé
+        if (dd.evals.some(e => e.classId === cls.id && e.date === dv.date && hasScores(e)) || dd.notes.some(x => x.classId === cls.id && x.date === dv.date && hasScores(x))) { skipped++; continue; }
+        let n = dd.notes.find(x => x.classId === cls.id && x.date === dv.date);
         if (n) updated++; else { n = { id: uid(), classId: cls.id, name, date: dv.date, max: dv.max, coef: dv.coef, scores: {} }; dd.notes.push(n); created++; }
         n.max = dv.max; n.coef = dv.coef;
         for (const h of data.studs) if (ids[h.raw] && h.vals[dv.j] !== undefined) n.scores[ids[h.raw]] = h.vals[dv.j];
       }
     });
-    toast(`${created} note(s) créée(s)` + (updated ? `, ${updated} mise(s) à jour` : '') + '.');
+    toast(`${created} note(s) créée(s)` + (updated ? `, ${updated} colonne(s) vide(s) complétée(s)` : '') + (skipped ? `, ${skipped} ignorée(s) (déjà des notes à cette date)` : '') + '.');
     onDone && onDone();
     onClose();
   }
@@ -197,11 +206,11 @@ function PronoteImport({ cls, onClose, onDone }) {
     ${err ? html`<p class="chip bad" style="white-space:normal">${err}</p>` : null}
     ${data ? html`
       <div class="gridwrap"><table class="g" style="width:100%;table-layout:auto"><thead><tr><th></th><th>Date</th><th>Barème</th><th>Coef.</th><th>Notes</th></tr></thead>
-        <tbody>${data.devoirs.map(x => html`<tr key=${x.j}><td><input type="checkbox" checked=${!!sel[x.j]} onChange=${e => setSel({ ...sel, [x.j]: e.target.checked })} aria-label="Importer" /></td>
-          <td>${fmtDateShort(x.date)}</td><td>/${fmtNum(x.max)}</td><td>${fmtNum(x.coef)}</td><td>${x.n ? x.n + ' / ' + data.studs.length : html`<span class="muted">aucune</span>`}</td></tr>`)}</tbody></table></div>
+        <tbody>${data.devoirs.map(x => html`<tr key=${x.j}><td><input type="checkbox" disabled=${conflict(x)} checked=${!!sel[x.j]} onChange=${e => setSel({ ...sel, [x.j]: e.target.checked })} aria-label="Importer" /></td>
+          <td>${fmtDateShort(x.date)}</td><td>/${fmtNum(x.max)}</td><td>${fmtNum(x.coef)}</td><td>${conflict(x) ? html`<span class="chip">déjà des notes à cette date</span>` : x.n ? x.n + ' / ' + data.studs.length : html`<span class="muted">aucune</span>`}</td></tr>`)}</tbody></table></div>
       <p style="margin:0"><b>${data.studs.length - missing.length}</b> élève(s) sur ${data.studs.length} reconnu(s) dans la classe ${cls.name}.</p>
       ${missing.length ? html`<label class="row" style="gap:8px"><input type="checkbox" checked=${addMissing} onChange=${e => setAddMissing(e.target.checked)} />
         Ajouter les ${missing.length} élève(s) manquant(s) à la classe</label>
         <p class="hint" style="margin:0">Non reconnus : ${missing.slice(0, 8).map(h => h.raw).join(', ')}${missing.length > 8 ? '…' : ''}</p>` : null}
-      <p class="hint" style="margin:0">Les colonnes sans aucune note sont décochées. Un nouvel import du même fichier met à jour les notes déjà importées (même date) sans créer de doublon.</p>` : null}<//>`;
+      <p class="hint" style="margin:0">Les colonnes sans aucune note sont décochées. Un devoir déjà noté à la même date (note ou évaluation) n'est jamais écrasé : il est ignoré.</p>` : null}<//>`;
 }
