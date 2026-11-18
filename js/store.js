@@ -59,13 +59,18 @@ export function defaultPeriods(type, sy = schoolYear()) {
 export function defaultData() {
   return {
     v: 1, createdAt: Date.now(), updatedAt: Date.now(), lastBackup: 0,
-    settings: { threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
+    settings: { parts: [
+      { id: 'p-nc', name: 'Nombres et calculs', color: '#2f6fed' },
+      { id: 'p-gm', name: 'Grandeurs et mesures', color: '#d9822b' },
+      { id: 'p-eg', name: 'Espace et géométrie', color: '#2b9a5f' },
+      { id: 'p-og', name: 'Organisation et gestion de données, fonctions', color: '#8a4fd0' },
+      { id: 'p-ap', name: 'Algorithmique et programmation', color: '#d0476b' }], threshold: 3, comps: ['Chercher', 'Modéliser', 'Représenter', 'Raisonner', 'Calculer', 'Communiquer'], advance: 'student' },
     etabs: [
       { id: 'e1', name: 'Établissement 1', type: 'semestre', periods: defaultPeriods('semestre') },
       { id: 'e2', name: 'Établissement 2', type: 'trimestre', periods: defaultPeriods('trimestre') }],
     classes: [], students: [],
     rooms: [{ id: 'r1', name: 'Salle 1', v: 2, items: defaultRoomSeats() }, { id: 'r2', name: 'Salle 2', v: 2, items: defaultRoomSeats() }],
-    plans: {}, slots: [], overrides: {}, holidays: [], sessions: {}, events: [], evals: [], notes: [],
+    plans: {}, slots: [], overrides: {}, holidays: [], sessions: {}, events: [], evals: [], notes: [], chapters: [], progress: {},
   };
 }
 

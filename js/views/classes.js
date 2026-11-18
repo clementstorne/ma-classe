@@ -2,6 +2,7 @@ import { html, useState } from '../../vendor/preact-htm.js';
 import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { planKey, parsePlanKey, groupStudents } from '../store.js';
 import { PlanThumb } from './salles.js';
+import { LEVELS } from './progressions.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { NotesTab } from './notes.js';
@@ -61,12 +62,13 @@ export function ClassFolder({ id, tab, q }) {
   function saveClass() {
     if (edit.del) { if (!confirm(`Supprimer la classe ${cls.name} et toutes ses données (élèves, notes, appels) ?`)) return; mutate(dd => {
       const ids = new Set(dd.students.filter(s => s.classId === id).map(s => s.id));
+      for (const k of Object.keys(dd.progress || {})) if (k.startsWith(id + '|')) delete dd.progress[k];
       dd.classes = dd.classes.filter(c => c.id !== id); dd.students = dd.students.filter(s => s.classId !== id);
       dd.slots = dd.slots.filter(s => s.classId !== id); dd.events = dd.events.filter(e => e.classId !== id); dd.evals = dd.evals.filter(e => e.classId !== id); dd.notes = (dd.notes || []).filter(n => n.classId !== id);
       for (const k of Object.keys(dd.sessions)) if (dd.sessions[k].classId === id) delete dd.sessions[k];
       for (const k of Object.keys(dd.plans)) if (k.startsWith(id + '|')) delete dd.plans[k];
     }); setEdit(null); go('/classes'); return; }
-    mutate(dd => Object.assign(dd.classes.find(c => c.id === id), { name: edit.name.trim() || cls.name, etabId: edit.etabId, color: edit.color }));
+    mutate(dd => Object.assign(dd.classes.find(c => c.id === id), { name: edit.name.trim() || cls.name, etabId: edit.etabId, color: edit.color, level: edit.level || '' }));
     setEdit(null);
   }
   function newStudent() {
@@ -78,7 +80,7 @@ export function ClassFolder({ id, tab, q }) {
   return html`<div class=${'page' + (tab === 'suivi' || tab === 'notes' ? ' fitcol' : '')}>
     <div class="page-head"><span class="dot" style=${{ background: classColor(cls) }}></span><h1>${cls.name}</h1>
       <span class="sub">${studs.length} élèves · ${etabOf(d, cls).name}</span><span class="grow"></span>
-      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>${Ico('gear')} Paramètres</button></div>
+      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls), level: cls.level || '' })}>${Ico('gear')} Paramètres</button></div>
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
         <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${slot && slot.group ? ' · groupe ' + slot.group : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
@@ -101,6 +103,7 @@ export function ClassFolder({ id, tab, q }) {
       foot=${html`<button class="btn danger" onClick=${() => { edit.del = true; saveClass(); }}>Supprimer la classe</button><span class="grow"></span><button class="btn primary" onClick=${saveClass}>Enregistrer</button>`}>
       <${Field} label="Nom"><input value=${edit.name} onInput=${e => setEdit({ ...edit, name: e.target.value })} /><//>
       <${Field} label="Établissement"><select value=${edit.etabId} onChange=${e => setEdit({ ...edit, etabId: e.target.value })}>${d.etabs.map(e => html`<option value=${e.id}>${e.name}</option>`)}</select><//>
+      <${Field} label="Niveau"><select value=${edit.level || ''} onChange=${e => setEdit({ ...edit, level: e.target.value })}><option value="">Automatique (d'après le nom)</option>${LEVELS.map(l => html`<option value=${l}>${l}</option>`)}</select><//>
       <${Field} label="Couleur de la classe"><${ColorPicker} value=${edit.color} onChange=${c => setEdit({ ...edit, color: c })} /><//><//>` : null}
   </div>`;
 }

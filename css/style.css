@@ -296,3 +296,26 @@ table.g.suivi .stk{left:auto}
 .tabs.eq a{flex:1 1 0;justify-content:center}
 table.g thead th.stk{z-index:6}
 table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
+/* progressions */
+.calwrap{flex:1;min-height:0;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);-webkit-overflow-scrolling:touch}
+.page:not(.fitcol) .calwrap{max-height:none}
+.cal{display:grid;grid-auto-rows:28px;grid-template-rows:42px;position:relative;min-width:max-content}
+.cal .ch{position:sticky;top:0;z-index:6;background:var(--soft);border-bottom:1px solid var(--line);border-left:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700}
+.cal .ch-w{border-left:0;justify-content:flex-start;padding-left:12px;color:var(--muted);font-size:13px}
+.cal .cw{padding:4px 10px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--card);position:sticky;left:0;z-index:3}
+.cal .cab{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);border-left:1px solid var(--line);background:var(--card);position:sticky;left:128px;z-index:3}
+.cal .cbg{border-bottom:1px solid var(--line)}
+.cal .cbg.now,.cal .cw.cal-now,.cal .cab.cal-now2{background:var(--accent-soft)}
+.cal .cw.cal-now{color:var(--accent);font-weight:700}
+.cal .cvac{z-index:2;background:repeating-linear-gradient(135deg,var(--soft) 0 8px,color-mix(in srgb,var(--muted) 14%,var(--soft)) 8px 16px);display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line)}
+.cal .cblock{z-index:1;margin:2px 4px;border-radius:9px;padding:5px 9px;display:flex;flex-direction:column;gap:1px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.18);min-height:0}
+.cal .cblock b{font-size:13.5px;line-height:1.2}
+.cal .cblock small{opacity:.9;font-size:11px}
+.cps{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:auto}
+.cp{border:2px solid var(--cc);background:#fff;color:#1b2333;border-radius:99px;padding:0 8px;font-size:11.5px;font-weight:700;min-height:22px;line-height:18px;cursor:pointer}
+.cp.doing{background:color-mix(in srgb,var(--cc) 35%,#fff)}
+.cp.done{background:var(--cc);color:#fff}
+.cp.late{box-shadow:0 0 0 2px var(--ko)}
+.chrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chrow .chn{width:22px;text-align:right}
+.chrow .grow{min-width:180px}
