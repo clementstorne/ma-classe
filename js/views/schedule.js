@@ -174,6 +174,7 @@ export function Schedule() {
             <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${room ? html` <small>· ${room.name}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
             ${o.week && !o.oneOff ? html`<i class="wk" title=${'Semaine ' + o.week}>${o.week}</i>` : null}
             <span>${o.start}–${o.end}</span>
+            ${se && se.ds && !o.cancelled ? html`<span class="dsb">DS</span>` : null}
             ${se && se.validated && !o.cancelled ? html`<span class="tag">✓${nAbs ? ' · ' + nAbs + ' abs.' : ''}</span>` : null}
           </button>`;
         })}
