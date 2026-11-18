@@ -117,7 +117,7 @@ function Suivi({ cls, studs, onOpen, initial }) {
   const th = d.settings.threshold;
   const rows = [...studs].sort((a, b) => sort === 'nom' ? 0 : (by[b.id][sort] - by[a.id][sort]));
   const tot = k => studs.reduce((n, s) => n + by[s.id][k], 0);
-  const cell = v => html`<td class=${v >= th ? 'hot' : v === th - 1 && th > 1 ? 'warm' : ''}>${v || '·'}</td>`;
+  const cell = (v, alert) => html`<td class=${alert && v >= th ? 'hot' : alert && v === th - 1 && th > 1 ? 'warm' : ''}>${v || '·'}</td>`;
   function csv() {
     const L = [['Nom', 'Prénom', 'Travail non fait', 'Oublis matériel', 'Absences', 'Retards'].join(';')];
     for (const s of studs) L.push([s.nom, s.prenom, by[s.id].dev, by[s.id].mat, by[s.id].abs, by[s.id].ret].join(';'));
@@ -125,11 +125,11 @@ function Suivi({ cls, studs, onOpen, initial }) {
   }
   return html`<div class="row" style="margin-bottom:10px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
       ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>${g}</option>`)}</select>` : null}
-      <span class="hint">Seuil d'alerte : ${th} (modifiable dans les réglages)</span><span class="grow"></span><button class="btn small" onClick=${csv}>⬇ CSV</button></div>
+      <span class="hint">Seuil d'alerte : ${th} (travail non fait et oublis de matériel · modifiable dans les réglages)</span><span class="grow"></span><button class="btn small" onClick=${csv}>⬇ CSV</button></div>
     <div class="table-wrap"><table class="t"><thead><tr><th onClick=${() => setSort('nom')}>Élève</th>
       <th onClick=${() => setSort('dev')}>📝 Travail non fait</th><th onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
       <th onClick=${() => setSort('abs')}>🚫 Absences</th><th onClick=${() => setSort('ret')}>⏰ Retards</th></tr></thead>
-      <tbody>${rows.map(s => html`<tr class="clk" key=${s.id} onClick=${() => onOpen(s.id)}><td>${displayName(s)}</td>${cell(by[s.id].dev)}${cell(by[s.id].mat)}${cell(by[s.id].abs)}${cell(by[s.id].ret)}</tr>`)}
+      <tbody>${rows.map(s => html`<tr class="clk" key=${s.id} onClick=${() => onOpen(s.id)}><td>${displayName(s)}</td>${cell(by[s.id].dev, true)}${cell(by[s.id].mat, true)}${cell(by[s.id].abs)}${cell(by[s.id].ret)}</tr>`)}
       <tr><td><b>Total</b></td><td><b>${tot('dev')}</b></td><td><b>${tot('mat')}</b></td><td><b>${tot('abs')}</b></td><td><b>${tot('ret')}</b></td></tr></tbody></table></div>
     <p class="hint">Touche un titre de colonne pour trier, une ligne pour ouvrir la fiche de l'élève.</p>`;
 }

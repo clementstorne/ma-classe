@@ -69,7 +69,7 @@ export function Settings({ tab: t }) {
     ${tab === 'competences' && html`<div>
 
     <div class="card col">
-      <${Field} label="Seuil d'alerte (nombre d'oublis / travaux non faits sur la période)"><input type="number" min="1" value=${d.settings.threshold} onInput=${v => mutate(dd => { dd.settings.threshold = Math.max(1, Number(v.target.value) || 1); })} /><//>
+      <${Field} label="Seuil d'alerte (travaux non faits et oublis de matériel sur la période ; les absences et retards ne sont pas concernés)"><input type="number" min="1" value=${d.settings.threshold} onInput=${v => mutate(dd => { dd.settings.threshold = Math.max(1, Number(v.target.value) || 1); })} /><//>
       <${Field} label="Compétences (séparées par des virgules)"><input value=${d.settings.comps.join(', ')} onChange=${v => mutate(dd => { dd.settings.comps = v.target.value.split(',').map(x => x.trim()).filter(Boolean); })} /><//>
     </div>
 
