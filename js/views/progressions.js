@@ -20,6 +20,7 @@ function levelsOf(d) {
   return [...set].sort((a, b) => levelRank(a) - levelRank(b) || a.localeCompare(b));
 }
 const chaptersOf = (d, level) => d.chapters.filter(c => c.level === level);
+export const chaptersFor = chaptersOf;
 
 /** Semaines de l'année (du lundi de la première période au lundi de la dernière), avec les semaines entièrement en vacances. */
 function calWeeks(d) {
@@ -44,29 +45,37 @@ function layout(d, levels) {
   const nowWeek = (weeks.find(w => w.start <= nowIso && nowIso <= w.end) || {}).i;
   for (const lv of levels) {
     let cur = 0; blocks[lv] = []; over[lv] = 0;
+    let n = 0;
     for (const ch of chaptersOf(d, lv)) {
+      n++;
       const h = Math.max(1, Math.round((ch.weeks || 1) * 2));
       const k0 = cur, k1 = cur + h - 1; cur += h;
       const w0 = usable[Math.floor(k0 / 2)], w1 = usable[Math.floor(k1 / 2)];
       if (w0 === undefined) { over[lv]++; continue; }
       const last = w1 === undefined ? usable[usable.length - 1] : w1;
       if (w1 === undefined) over[lv]++;
-      blocks[lv].push({ ch, row0: 2 * w0 + (k0 % 2), row1: w1 === undefined ? 2 * last + 1 : 2 * w1 + (k1 % 2), endWeek: last, cut: w1 === undefined });
+      blocks[lv].push({ ch, n, row0: 2 * w0 + (k0 % 2), row1: w1 === undefined ? 2 * last + 1 : 2 * w1 + (k1 % 2), endWeek: last, cut: w1 === undefined });
     }
   }
   return { weeks, blocks, over, nowWeek };
 }
 
-const nextStatus = s => (!s ? 'doing' : s === 'doing' ? 'done' : null);
-const cycle = (cid, chid) => mutate(dd => { const k = cid + '|' + chid, n = nextStatus(dd.progress[k]); if (n) dd.progress[k] = n; else delete dd.progress[k]; });
+/** Avancement d'une classe, déduit des séances : le chapitre de la dernière séance est « en cours », les autres chapitres déjà travaillés sont « terminés ». */
+export function progressOf(d, classId) {
+  const ses = Object.values(d.sessions).filter(x => x.classId === classId && x.chapterId).sort((a, b) => a.date.localeCompare(b.date));
+  const out = {};
+  for (const x of ses) out[x.chapterId] = 'done';
+  if (ses.length) out[ses[ses.length - 1].chapterId] = 'doing';
+  return out;
+}
 const STATUS_GLYPH = { doing: '◐', done: '✓' };
 
 function Chips({ d, level, ch, late }) {
   const cls = sortedClasses(d).filter(c => levelOf(c) === level);
   return html`${cls.map(c => {
-    const st = d.progress[c.id + '|' + ch.id];
-    return html`<button key=${c.id} class=${'cp' + (st ? ' ' + st : '') + (late && st !== 'done' ? ' late' : '')} style=${{ '--cc': classColor(c) }}
-      title=${{ doing: 'En cours', done: 'Terminé' }[st] || 'À venir'} onClick=${e => { e.stopPropagation(); cycle(c.id, ch.id); }}>${c.name}${st ? ' ' + STATUS_GLYPH[st] : ''}</button>`;
+    const st = progressOf(d, c.id)[ch.id];
+    return html`<span key=${c.id} class=${'cp' + (st ? ' ' + st : '') + (late && st !== 'done' ? ' late' : '')} style=${{ '--cc': classColor(c) }}
+      title=${{ doing: 'En cours', done: 'Terminé' }[st] || 'À venir'}>${c.name}${st ? ' ' + STATUS_GLYPH[st] : ''}</span>`;
   })}`;
 }
 
@@ -97,7 +106,7 @@ function Calendar({ d, levels }) {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
       return html`<div class="cblock" key=${b.ch.id} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
-        <b>${b.ch.title}</b><small>${fmtW(b.ch.weeks || 1)} sem.</small>
+        <b>${b.n}. ${b.ch.title}</b>
         <div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div></div>`;
     }))}
   </div></div>`;
@@ -114,7 +123,7 @@ function ChapterList({ d, level }) {
     if (q < 0 || q >= idxs.length) return;
     const a = idxs[p], b = idxs[q]; [dd.chapters[a], dd.chapters[b]] = [dd.chapters[b], dd.chapters[a]];
   });
-  const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const k of Object.keys(dd.progress)) if (k.endsWith('|' + ch.id)) delete dd.progress[k]; }); };
+  const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const x of Object.values(dd.sessions)) if (x.chapterId === ch.id) delete x.chapterId; }); };
   const total = list.reduce((n, c) => n + (c.weeks || 1), 0);
   if (!list.length) return html`<${Empty} title=${'Aucun chapitre en ' + level} />`;
   return html`<div class="list">${list.map((ch, i) => {

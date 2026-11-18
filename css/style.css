@@ -312,7 +312,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .cal .cblock b{font-size:13.5px;line-height:1.2}
 .cal .cblock small{opacity:.9;font-size:11px}
 .cps{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:auto}
-.cp{border:2px solid var(--cc);background:#fff;color:#1b2333;border-radius:99px;padding:0 8px;font-size:11.5px;font-weight:700;min-height:22px;line-height:18px;cursor:pointer}
+.cp{border:2px solid var(--cc);background:#fff;color:#1b2333;border-radius:99px;padding:0 8px;font-size:11.5px;font-weight:700;min-height:22px;line-height:18px;cursor:default;display:inline-block}
 .cp.doing{background:color-mix(in srgb,var(--cc) 35%,#fff)}
 .cp.done{background:var(--cc);color:#fff}
 .cp.late{box-shadow:0 0 0 2px var(--ko)}
