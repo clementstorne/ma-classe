@@ -277,3 +277,7 @@ table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--c
 .tabs a{display:inline-flex;align-items:center;gap:8px;padding:10px 18px}
 .h-ico{display:flex;align-items:center;gap:10px}
 .btn .ico{flex:none}
+table.g.suivi tr.clk{cursor:pointer}
+table.g.suivi tbody tr:hover td:not(.hot):not(.warm),table.g.suivi tbody tr:hover th.stk{background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+table.g.suivi tfoot td,table.g.suivi tfoot th{font-weight:700;color:var(--ink);font-size:14px}
+table.g.suivi td.hot{background:var(--ko-soft)} table.g.suivi td.warm{background:var(--warn-soft)}

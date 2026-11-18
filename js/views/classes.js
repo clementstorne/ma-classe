@@ -4,7 +4,7 @@ import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from '.
 import { StudentSheet } from './student.js';
 import { NotesTab } from './notes.js';
 import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
-import { uid, CLASS_COLORS, classColor, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum } from '../util.js';
+import { uid, CLASS_COLORS, classColor, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum, seatLabels } from '../util.js';
 import { suiviStats, evalAverage } from '../logic.js';
 import { go } from '../router.js';
 import { Ico } from '../icons.js';
@@ -109,6 +109,7 @@ function Suivi({ cls, studs, onOpen, initial }) {
   const cur = currentPeriod(etab);
   const [per, setPer] = useState(cur ? cur.id : 'all');
   const [sort, setSort] = useState('nom');
+  const lab = seatLabels(studs);
   const range = per === 'all' ? null : (etab.periods.find(p => p.id === per) || null);
   const by = suiviStats(d, cls.id, studs.map(s => s.id), range);
   const th = d.settings.threshold;
@@ -122,12 +123,12 @@ function Suivi({ cls, studs, onOpen, initial }) {
   }
   return html`<div class="row" style="margin-bottom:10px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
       <span class="grow"></span><button class="btn small" onClick=${csv}>${Ico('download')} CSV</button></div>
-    <div class="table-wrap"><table class="t"><thead><tr><th onClick=${() => setSort('nom')}>Élève</th>
-      <th onClick=${() => setSort('dev')}>📝 Travail non fait</th><th onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
-      <th onClick=${() => setSort('abs')}>🚫 Absences</th><th onClick=${() => setSort('ret')}>⏰ Retards</th></tr></thead>
-      <tbody>${rows.map(s => html`<tr class="clk" key=${s.id} onClick=${() => onOpen(s.id)}><td>${displayName(s)}</td>${cell(by[s.id].dev, true)}${cell(by[s.id].mat, true)}${cell(by[s.id].abs)}${cell(by[s.id].ret)}</tr>`)}
-      <tr><td><b>Total</b></td><td><b>${tot('dev')}</b></td><td><b>${tot('mat')}</b></td><td><b>${tot('abs')}</b></td><td><b>${tot('ret')}</b></td></tr></tbody></table></div>
-`;
+    <div class="gridwrap"><table class="g suivi" style="width:100%"><colgroup><col style="width:190px" /><col /><col /><col /><col /></colgroup>
+      <thead><tr><th class="stk" style="height:44px;cursor:pointer" onClick=${() => setSort('nom')}>Élève</th>
+      <th style="cursor:pointer" onClick=${() => setSort('dev')}>📝 Travail non fait</th><th style="cursor:pointer" onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
+      <th style="cursor:pointer" onClick=${() => setSort('abs')}>🚫 Absences</th><th style="cursor:pointer" onClick=${() => setSort('ret')}>⏰ Retards</th></tr></thead>
+      <tbody>${rows.map(s => html`<tr class="clk" key=${s.id} onClick=${() => onOpen(s.id)}><th class="stk">${lab[s.id]}</th>${cell(by[s.id].dev, true)}${cell(by[s.id].mat, true)}${cell(by[s.id].abs)}${cell(by[s.id].ret)}</tr>`)}</tbody>
+      <tfoot><tr><th class="stk" style="text-align:left">Total</th><td>${tot('dev')}</td><td>${tot('mat')}</td><td>${tot('abs')}</td><td>${tot('ret')}</td></tr></tfoot></table></div>`;
 }
 
 function NotesList({ cls, studs, onImport }) {
