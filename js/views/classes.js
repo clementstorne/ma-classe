@@ -109,10 +109,6 @@ function Suivi({ cls, studs, onOpen, initial }) {
   const cur = currentPeriod(etab);
   const [per, setPer] = useState(cur ? cur.id : 'all');
   const [sort, setSort] = useState('nom');
-  const [grp, setGrp] = useState(initial || '');
-  const groups = groupsOf(cls);
-  const all = studs;
-  studs = grp ? studs.filter(s => s.group === grp) : studs;
   const range = per === 'all' ? null : (etab.periods.find(p => p.id === per) || null);
   const by = suiviStats(d, cls.id, studs.map(s => s.id), range);
   const th = d.settings.threshold;
@@ -125,14 +121,13 @@ function Suivi({ cls, studs, onOpen, initial }) {
     download(new Blob(['﻿' + L.join('\n')], { type: 'text/csv' }), `suivi-${cls.name}.csv`);
   }
   return html`<div class="row" style="margin-bottom:10px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
-      ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>${g}</option>`)}</select>` : null}
-      <span class="hint">Seuil d'alerte : ${th} (travail non fait et oublis de matériel · modifiable dans les paramètres)</span><span class="grow"></span><button class="btn small" onClick=${csv}>${Ico('download')} CSV</button></div>
+      <span class="grow"></span><button class="btn small" onClick=${csv}>${Ico('download')} CSV</button></div>
     <div class="table-wrap"><table class="t"><thead><tr><th onClick=${() => setSort('nom')}>Élève</th>
       <th onClick=${() => setSort('dev')}>📝 Travail non fait</th><th onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
       <th onClick=${() => setSort('abs')}>🚫 Absences</th><th onClick=${() => setSort('ret')}>⏰ Retards</th></tr></thead>
       <tbody>${rows.map(s => html`<tr class="clk" key=${s.id} onClick=${() => onOpen(s.id)}><td>${displayName(s)}</td>${cell(by[s.id].dev, true)}${cell(by[s.id].mat, true)}${cell(by[s.id].abs)}${cell(by[s.id].ret)}</tr>`)}
       <tr><td><b>Total</b></td><td><b>${tot('dev')}</b></td><td><b>${tot('mat')}</b></td><td><b>${tot('abs')}</b></td><td><b>${tot('ret')}</b></td></tr></tbody></table></div>
-    <p class="hint">Touche un titre de colonne pour trier, une ligne pour ouvrir la fiche de l'élève.</p>`;
+`;
 }
 
 function NotesList({ cls, studs, onImport }) {
@@ -180,8 +175,8 @@ function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos, initial }) {
     mutate(dd => { dd.students.find(x => x.id === s.id).group = next; });
   };
   return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${onImport}>${Ico('upload')} Importer une liste</button>
-      <button class="btn" onClick=${onAdd}>${Ico('plus')} Ajouter un élève</button><button class="btn" onClick=${onPhotos}>${Ico('camera')} Photos en lot</button>
-      <button class="btn" onClick=${() => setGm(true)}>${Ico('users')} Groupes${groups.length ? ' (' + groups.join(', ') + ')' : ''}</button></div>
+      <button class="btn" onClick=${onAdd}>${Ico('plus')} Ajouter un élève</button><button class="btn" onClick=${onPhotos}>${Ico('camera')} Importer les photos</button>
+      <button class="btn" onClick=${() => setGm(true)}>${Ico('users')} Gestion des groupes</button></div>
     ${groups.length ? html`<div class="row" style="margin-bottom:10px"><div class="seg">
       <button class=${flt === '' ? 'on P' : ''} onClick=${() => setFlt('')}>Tous (${studs.length})</button>
       ${groups.map(g => html`<button class=${flt === g ? 'on P' : ''} onClick=${() => setFlt(g)}>${g} (${studs.filter(s => s.group === g).length})</button>`)}
