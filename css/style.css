@@ -383,3 +383,4 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
   .print-area .cblock.short,.print-area .cblock.tiny{display:flex}
   .print-area .cvac{font-size:9px}
 }
+.mframe{flex:1;width:100%;border:0;background:#fff;min-height:0}
