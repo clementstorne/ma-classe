@@ -267,3 +267,4 @@ table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--c
 .weekbox .week{height:100%;overflow:hidden;align-content:start}
 .app{overflow:hidden}
 #app{height:100vh;height:100dvh;overflow:hidden}
+.slot:has(.wk) b{padding-right:22px;display:block}
