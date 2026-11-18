@@ -1,4 +1,4 @@
-import { html, useState } from '../../vendor/preact-htm.js';
+import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
 import { useStore, mutate, studentsOf, groupsOf, etabOf, currentPeriod } from '../store.js';
 import { studentStats } from '../logic.js';
 import { Modal, Field, Empty, PeriodSelect, toast } from './common.js';
@@ -14,6 +14,13 @@ const f1 = v => fmtNum(Math.round(v * 100) / 100);
  *  automatiquement (lecture seule) ; les autres se saisissent à la main, colonne par colonne. */
 export function NotesTab({ cls }) {
   const d = useStore();
+  const tbl = useRef();
+  // hauteur réelle de la 1re ligne d'en-tête : la 2e s'y accroche (évite tout chevauchement, quelle que soit la police)
+  useEffect(() => {
+    const t = tbl.current; if (!t) return;
+    const h = t.querySelector('thead tr').getBoundingClientRect().height;
+    t.style.setProperty('--h1', h + 'px');
+  });
   const etab = etabOf(d, cls);
   const cur = currentPeriod(etab);
   const [per, setPer] = useState(cur ? cur.id : 'all');
@@ -92,7 +99,7 @@ export function NotesTab({ cls }) {
       <button class="btn" onClick=${() => setImp(true)}>${Ico('download')} Importer des notes</button></div>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
-    : html`<div class="gridwrap"><table class="g notes" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>
+    : html`<div class="gridwrap"><table class="g notes" ref=${tbl} style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>
       <colgroup><col style=${{ width: FIRST_W + 'px' }} /><col style=${{ width: COL_W + 'px' }} />${cols.map(() => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       <thead><tr><th class="stk">Élève</th><th class="moy" style="height:58px">Moyenne<br /><small>/20</small></th>${cols.map(c => html`<th key=${c.id} style="height:58px;cursor:pointer;line-height:1.25"
           onClick=${() => c.kind === 'eval' ? go('/eval/' + c.id) : setForm({ id: c.id, name: c.name, date: c.date, max: String(c.max) })}
