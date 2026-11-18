@@ -180,7 +180,7 @@ function Calendar({ d, levels, from = 0, to = Infinity, print = false }) {
   }, [levels.join(',')]);
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 4;
-  const nw = Math.max(30, 14 + 9 * String(allWeeks.length).length), dw = 140;
+  const nw = Math.max(30, 14 + 9 * String(allWeeks.length).length), dw = print ? 112 : 140;
   const vacSpan = w => { let n = 1; while (allWeeks[w.i + n]?.vac === w.vac && w.i + n <= last) n++; return n; };
   const base = from * R, top = (last + 1) * R - 1;
   return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `${nw}px ${dw}px ${ab ? 34 : 0}px repeat(${levels.length}, minmax(${print ? 120 : 170}px, 1fr))`, minWidth: print ? 0 : nw + dw + (ab ? 34 : 0) + 170 * levels.length + "px" }}>
@@ -208,9 +208,9 @@ function Calendar({ d, levels, from = 0, to = Infinity, print = false }) {
   </div></div>`;
 }
 
-/** Version imprimable : le calendrier découpé en pages de 10 semaines (A4 paysage). */
+/** Version imprimable : le calendrier découpé en pages de 15 semaines (A4 portrait). */
 function PrintCalendars({ d, levels }) {
-  const n = calWeeks(d).length, per = 10, pages = [];
+  const n = calWeeks(d).length, per = 15, pages = [];
   for (let f = 0; f < n; f += per) pages.push(f);
   return html`<div class="print-area">${pages.map(f => html`<section class="print-page" key=${f}>
     <h2>Progressions · semaines ${f + 1} à ${Math.min(n, f + per)}</h2><${Calendar} d=${d} levels=${levels} from=${f} to=${f + per - 1} print=${true} /></section>`)}</div>`;

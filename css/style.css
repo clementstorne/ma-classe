@@ -349,7 +349,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 
 .print-area{display:none}
 @media print{
-  @page{size:A4 landscape;margin:10mm}
+  @page{size:A4 portrait;margin:10mm}
   html,body,#app,.app,.main,.main.fit{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important}
   .topbar,.page>*:not(.print-area){display:none!important}
   .main{padding:0!important}
@@ -366,3 +366,5 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
   .print-area .cblock.planned{opacity:.6}
   .print-area .cp{cursor:default}
 }
+@media print{.print-area .cps{display:none!important}}
+@media print{#app>p{display:none!important}}
