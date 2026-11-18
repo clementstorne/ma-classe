@@ -40,26 +40,31 @@ function calWeeks(d) {
 const chIds = x => x.chapterIds || (x.chapterId ? [x.chapterId] : []);
 export const sessionChapters = chIds;
 
-/** Chapitres réellement travaillés d'un niveau, d'après la classe la plus avancée : { id → {first, last} } (dates des séances). */
+const R = 20;   // subdivisions verticales d'une semaine : un chapitre occupe la part de la semaine proportionnelle à ses heures de cours
+
+/** Chapitres réellement travaillés d'un niveau, d'après la classe la plus avancée : séances (date, chapitres, heures) et premier/dernier jour par chapitre. */
 function taughtOf(d, lv) {
   const chs = chaptersOf(d, lv), order = Object.fromEntries(chs.map((c, i) => [c.id, i]));
   let best = null;
   for (const c of d.classes.filter(c => levelOf(c) === lv)) {
-    const per = {};
-    for (const x of Object.values(d.sessions)) if (x.classId === c.id) for (const id of chIds(x)) if (id in order) {
-      const e = per[id] ||= { first: x.date, last: x.date };
-      if (x.date < e.first) e.first = x.date; if (x.date > e.last) e.last = x.date;
+    const per = {}, sessions = [];
+    for (const x of Object.values(d.sessions)) if (x.classId === c.id) {
+      const ids = chIds(x).filter(id => id in order); if (!ids.length) continue;
+      const o = x.slotId ? occurrence(d, x.slotId, x.date) : null;
+      if (o && o.cancelled) continue;
+      sessions.push({ date: x.date, ids, h: o ? (toMin(o.end) - toMin(o.start)) / 60 : 1 });
+      for (const id of ids) { const e = per[id] ||= { first: x.date, last: x.date }; if (x.date < e.first) e.first = x.date; if (x.date > e.last) e.last = x.date; }
     }
     const top = Math.max(-1, ...Object.keys(per).map(id => order[id]));
     const n = Object.keys(per).length;
-    if (n && (!best || top > best.top || (top === best.top && n > best.n))) best = { per, top, n };
+    if (n && (!best || top > best.top || (top === best.top && n > best.n))) best = { per, top, n, sessions, order };
   }
   return best;
 }
 
-/** Place les chapitres de chaque niveau : ceux déjà travaillés sur leurs vraies semaines, les autres à la suite (demi-semaines, hors vacances). */
+/** Place les chapitres de chaque niveau : ceux déjà travaillés sur leurs vraies semaines (hauteur proportionnelle aux heures), les autres à la suite (demi-semaines, hors vacances). */
 function layout(d, levels) {
-  const weeks = calWeeks(d);
+  const weeks = calWeeks(d), H = R / 2;
   const usable = weeks.filter(w => !w.vac).map(w => w.i);
   const blocks = {}, over = {};
   const nowIso = iso(new Date());
@@ -73,20 +78,29 @@ function layout(d, levels) {
     chs.forEach((ch, n) => (t && t.per[ch.id] ? done : rest).push({ ch, n: n + 1 }));
     let cur = 0;
     if (t) {
-      const spans = done.map(x => ({ ...x, w0: weekOf(t.per[x.ch.id].first), w1: weekOf(t.per[x.ch.id].last) }));
-      spans.forEach((x, i) => {
-        const prev = spans[i - 1], next = spans[i + 1];
-        let r0 = 2 * x.w0 + (prev && prev.w1 === x.w0 ? 1 : 0), r1 = 2 * x.w1 + (next && next.w0 === x.w1 ? 0 : 1);
-        if (r1 < r0) r1 = r0;
-        // semaines sans aucun cours saisi (toutes classes) à l'intérieur du chapitre : zone blanche, le bloc est découpé
-        const gap = w => w > x.w0 && w < x.w1 && !weeks[w].vac && !active.has(w);
-        const runs = []; let a = null;
-        for (let w = x.w0; w <= x.w1; w++) { if (gap(w)) { if (a !== null) runs.push([a, w - 1]); a = null; } else if (a === null) a = w; }
-        if (a !== null) runs.push([a, x.w1]);
-        runs.forEach(([ra, rb], j) => blocks[lv].push({ ch: x.ch, n: x.n, row0: ra === x.w0 ? r0 : 2 * ra, row1: rb === x.w1 ? r1 : 2 * rb + 1,
-          endWeek: x.w1, cut: false, actual: true, cont: j > 0, last: j === runs.length - 1 }));
-      });
-      const lastEnd = Math.max(...spans.map(x => x.w1));
+      // poids (heures) de chaque chapitre dans chaque semaine
+      const wk = {};
+      for (const x of t.sessions) { const w = weekOf(x.date), m = wk[w] ||= {}; for (const id of x.ids) m[id] = (m[id] || 0) + x.h / x.ids.length; }
+      const segs = {};
+      for (const [w, m] of Object.entries(wk)) {
+        const ids = Object.keys(m).sort((a, b) => t.order[a] - t.order[b]), T = ids.reduce((a, id) => a + m[id], 0);
+        let acc = 0, prev = 0;
+        ids.forEach((id, i) => { acc += m[id]; const u1 = i === ids.length - 1 ? R : Math.max(prev + 1, Math.round(R * acc / T)); (segs[id] ||= []).push({ w: Number(w), u0: prev, u1 }); prev = u1; });
+      }
+      let lastEnd = 0;
+      for (const { ch, n } of done) {
+        const sg = (segs[ch.id] || []).sort((a, b) => a.w - b.w), runs = [];
+        for (const g of sg) {
+          const r = runs[runs.length - 1];
+          let gap = false;
+          if (r) for (let w = r[r.length - 1].w + 1; w < g.w; w++) if (!weeks[w].vac && !active.has(w)) gap = true;
+          if (r && !gap) r.push(g); else runs.push([g]);
+        }
+        runs.forEach((r, j) => {
+          const f = r[0], l = r[r.length - 1]; lastEnd = Math.max(lastEnd, l.w);
+          blocks[lv].push({ ch, n, row0: f.w * R + f.u0, row1: l.w * R + l.u1 - 1, endWeek: l.w, cut: false, actual: true, cont: j > 0, last: j === runs.length - 1 });
+        });
+      }
       const from = Math.max(lastEnd + 1, nowWeek === undefined ? 0 : nowWeek);
       const k = usable.findIndex(w => w >= from);
       cur = 2 * (k < 0 ? usable.length : k);
@@ -98,7 +112,8 @@ function layout(d, levels) {
       if (w0 === undefined) { over[lv]++; continue; }
       const last = w1 === undefined ? usable[usable.length - 1] : w1;
       if (w1 === undefined) over[lv]++;
-      blocks[lv].push({ ch, n, row0: 2 * w0 + (k0 % 2), row1: w1 === undefined ? 2 * last + 1 : 2 * w1 + (k1 % 2), endWeek: last, cut: w1 === undefined, actual: false, planned: !!t });
+      const r0 = 2 * w0 + (k0 % 2), r1 = w1 === undefined ? 2 * last + 1 : 2 * w1 + (k1 % 2);
+      blocks[lv].push({ ch, n, row0: r0 * H, row1: (r1 + 1) * H - 1, endWeek: last, cut: w1 === undefined, actual: false, planned: !!t });
     }
   }
   return { weeks, blocks, over, nowWeek };
@@ -162,20 +177,20 @@ function Calendar({ d, levels }) {
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 3;
   const vacSpan = w => { let n = 1; while (weeks[w.i + n]?.vac === w.vac) n++; return n; };
-  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `150px 34px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: 184 + 170 * levels.length + "px" }}>
+  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `172px 34px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: 206 + 170 * levels.length + "px" }}>
     <div class="ch ch-w" style="grid-row:1;grid-column:1/3">Semaine</div>
     ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
     ${weeks.map(w => {
-      const r = 2 * w.i + 2, now = w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
-      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 1 }}><span class="wn">${w.i + 1}</span><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
-        <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: 2 }}>${w.vac ? '' : L || ''}</div>
-        <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span 2`, gridColumn: `3 / ${levels.length + 3}` }}></div>
-        ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${2 * vacSpan(w)}`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
+      const r = R * w.i + 2, now = w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
+      return html`<div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 1 }}><span class="wn">${w.i + 1}</span><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
+        <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 2 }}>${w.vac ? '' : L || ''}</div>
+        <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: `3 / ${levels.length + 3}` }}></div>
+        ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${R * vacSpan(w)}`, gridColumn: `3 / ${levels.length + 3}` }}>${w.vac}</div>` : null}`;
     })}
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
-      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 < 2 ? ' short' : '') + (b.cont ? ' ct cont' : '') + (b.last === false ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
+      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 + 1 < R ? ' short' : '') + (b.row1 - b.row0 + 1 < R / 2 ? ' tiny' : '') + (b.cont ? ' ct cont' : '') + (b.last === false ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
         ${b.cont ? null : html`<small>Chapitre ${b.n}</small><b>${b.ch.title}</b>`}
         ${b.last === false ? null : html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>`}</div>`;
     }))}
