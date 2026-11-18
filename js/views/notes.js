@@ -17,13 +17,11 @@ export function NotesTab({ cls }) {
   const etab = etabOf(d, cls);
   const cur = currentPeriod(etab);
   const [per, setPer] = useState(cur ? cur.id : 'all');
-  const [grp, setGrp] = useState('');
   const [form, setForm] = useState(null);
   const [imp, setImp] = useState(false);
-  const groups = groupsOf(cls);
   const classStuds = studentsOf(d, cls.id);
   const lab = seatLabels(classStuds);
-  const studs = classStuds.filter(s => !grp || s.group === grp);
+  const studs = classStuds;
   const range = per === 'all' ? null : (etab.periods || []).find(p => p.id === per) || null;
   const inR = date => !range || (date >= range.start && date <= range.end);
 
@@ -89,9 +87,9 @@ export function NotesTab({ cls }) {
   }
 
   return html`<div class="row" style="margin-bottom:12px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
-      ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
-      <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>＋ Note</button>
-      <button class="btn" onClick=${() => setImp(true)}>${Ico('download')} Importer (Pronote)</button></div>
+      <span class="grow"></span>
+      <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>${Ico('plus')} Ajouter une note</button>
+      <button class="btn" onClick=${() => setImp(true)}>${Ico('download')} Importer des notes</button></div>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
     : html`<div class="gridwrap"><table class="g notes" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>

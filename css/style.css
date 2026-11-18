@@ -294,3 +294,5 @@ table.g.suivi td.hot{background:var(--ko-soft)} table.g.suivi td.warm{background
 .page.fitcol>.gridwrap{flex:1 1 auto;min-height:0;max-height:none}
 table.g.suivi .stk{left:auto}
 .tabs.eq a{flex:1 1 0;justify-content:center}
+table.g thead th.stk{z-index:6}
+table.notes thead tr:nth-child(2) th{top:58px}
