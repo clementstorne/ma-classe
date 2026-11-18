@@ -253,7 +253,7 @@ export function Progressions() {
   }
   return html`<div class="page fitcol">
     <div class="page-head">
-      <div class="seg"><button class=${view === 'cal' ? 'on P' : ''} onClick=${() => setView('cal')}>Calendrier</button><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button></div>
+      <div class="seg eq"><button class=${view === 'cal' ? 'on P' : ''} onClick=${() => setView('cal')}>Calendrier</button><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button></div>
       <span class="grow"></span>
       <button class="btn" onClick=${() => setParts(true)}>${Ico('layout')} Parties du programme</button>
       ${view === 'list' ? html`<button class="btn primary" disabled=${!level} onClick=${addChapter}>${Ico('plus')} Ajouter un chapitre</button>` : null}</div>
