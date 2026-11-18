@@ -54,7 +54,8 @@ export function NotesTab({ cls }) {
     return den ? num / den * 20 : null;
   };
   const moys = studs.map(moyenne).filter(x => x != null);
-  const f10 = v => fmtNum(Math.round(v * 10) / 10);
+  // Arrondi Pronote : au centième puis au dixième supérieur (vérifié sur un export réel, 30 élèves sur 30).
+  const f10 = v => fmtNum(Math.ceil(Math.round(Math.round(v * 100) / 100 * 10 * 1000) / 1000) / 10);
   const moyClasse = moys.length ? f10(moys.reduce((a, b) => a + b, 0) / moys.length) : '';
   function setCoef(c, raw) {
     const x = raw.trim() === '' ? 1 : Number(raw.replace(',', '.'));
@@ -90,7 +91,7 @@ export function NotesTab({ cls }) {
       ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>＋ Note</button>
       <button class="btn" onClick=${() => setImp(true)}>⬆ Importer (Pronote)</button></div>
-    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20, arrondie au dixième) se calcule comme dans Pronote : total des points pondérés rapporté au total des barèmes pondérés ; les absents sont ignorés.</p>
+    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20) se calcule et s'arrondit comme dans Pronote (total des points pondérés rapporté au total des barèmes pondérés, arrondi au dixième supérieur) ; les absents sont ignorés.</p>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
     : html`<div class="gridwrap"><table class="g" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px' }}>
