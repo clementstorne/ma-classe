@@ -84,7 +84,7 @@ export function ClassFolder({ id, tab, q }) {
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
       ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id + (slot && slot.group && d.plans[planKey(id, room.id, slot.group)] ? '?g=' + encodeURIComponent(slot.group) : '')}>Plan de classe</a>` : null}</div>`
       : null}
-    <div class="tabs">${T('eleves', 'users', 'Élèves')}${T('suivi', 'chart', 'Suivi')}${T('notes', 'pen', 'Notes')}${T('evaluations', 'clip', 'Évaluations')}${T('plans', 'layout', 'Plans de classe')}</div>
+    <div class="tabs eq">${T('eleves', 'users', 'Élèves')}${T('suivi', 'chart', 'Suivi')}${T('notes', 'pen', 'Notes')}${T('evaluations', 'clip', 'Évaluations')}${T('plans', 'layout', 'Plans de classe')}</div>
     ${tab === 'suivi' ? html`<${Suivi} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onOpen=${setSheet} />`
       : tab === 'notes' ? html`<${NotesTab} cls=${cls} />`
       : tab === 'evaluations' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
@@ -124,7 +124,7 @@ function Suivi({ cls, studs, onOpen, initial }) {
     download(new Blob(['﻿' + L.join('\n')], { type: 'text/csv' }), `suivi-${cls.name}.csv`);
   }
   return html`<div class="row" style="margin-bottom:10px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
-      <span class="grow"></span><button class="btn small" onClick=${csv}>${Ico('download')} CSV</button></div>
+      <span class="grow"></span><button class="btn" onClick=${csv}>${Ico('upload')} Exporter en CSV</button></div>
     <div class="gridwrap"><table class="g suivi" style="width:100%"><colgroup><col style="width:190px" /><col /><col /><col /><col /></colgroup>
       <thead><tr><th class="stk" style="height:44px;cursor:pointer" onClick=${() => setSort('nom')}>Élève</th>
       <th style="cursor:pointer" onClick=${() => setSort('dev')}>📝 Travail non fait</th><th style="cursor:pointer" onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
@@ -144,7 +144,7 @@ function NotesList({ cls, studs, onImport }) {
     go(`/eval/${ev.id}?edit=1`);
   }
   return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>${Ico('plus')} Nouvelle évaluation</button>
-    <button class="btn" onClick=${onImport}>${Ico('upload')} Importer depuis Excel</button></div>
+    <button class="btn" onClick=${onImport}>${Ico('download')} Importer depuis Excel</button></div>
     ${!evs.length ? html`<${Empty} title="Aucune évaluation"><p>Crée une évaluation et saisis le détail des points question par question.</p><//>`
     : html`<div class="list">${evs.map(ev => {
         const avg = evalAverage(ev, studs.map(s => s.id), d.settings.comps, Object.fromEntries(studs.map(s => [s.id, s])));
@@ -203,7 +203,7 @@ function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos, initial }) {
     const next = order[(order.indexOf(s.group || '') + 1) % order.length];
     mutate(dd => { dd.students.find(x => x.id === s.id).group = next; });
   };
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${onImport}>${Ico('upload')} Importer une liste</button>
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${onImport}>${Ico('download')} Importer une liste</button>
       <button class="btn" onClick=${onAdd}>${Ico('plus')} Ajouter un élève</button><button class="btn" onClick=${onPhotos}>${Ico('camera')} Importer les photos</button>
       <button class="btn" onClick=${() => setGm(true)}>${Ico('users')} Gestion des groupes</button></div>
     ${groups.length ? html`<div class="row" style="margin-bottom:10px"><div class="seg">

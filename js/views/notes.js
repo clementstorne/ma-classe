@@ -3,6 +3,7 @@ import { useStore, mutate, studentsOf, groupsOf, etabOf, currentPeriod } from '.
 import { studentStats } from '../logic.js';
 import { Modal, Field, Empty, PeriodSelect, toast } from './common.js';
 import { go } from '../router.js';
+import { Ico } from '../icons.js';
 import { uid, todayISO, fmtNum, fmtDateShort, seatLabels, norm, splitFullName, classColor } from '../util.js';
 import { readTable } from './importer.js';
 
@@ -90,8 +91,7 @@ export function NotesTab({ cls }) {
   return html`<div class="row" style="margin-bottom:12px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
       ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>＋ Note</button>
-      <button class="btn" onClick=${() => setImp(true)}>⬆ Importer (Pronote)</button></div>
-    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20) se calcule et s'arrondit comme dans Pronote (total des points pondérés rapporté au total des barèmes pondérés, arrondi au dixième supérieur) ; les absents sont ignorés.</p>
+      <button class="btn" onClick=${() => setImp(true)}>${Ico('download')} Importer (Pronote)</button></div>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
     : html`<div class="gridwrap"><table class="g notes" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>
@@ -204,7 +204,7 @@ function PronoteImport({ cls, onClose, onDone }) {
     onClose();
   }
   return html`<${Modal} title="Importer des notes depuis Pronote" onClose=${onClose} wide
-    foot=${data ? html`<span class="grow"></span><button class="btn primary" onClick=${doImport} disabled=${!Object.values(sel).some(Boolean)}>Importer</button>` : null}>
+    foot=${data ? html`<span class="grow"></span><button class="btn primary" onClick=${doImport} disabled=${!Object.values(sel).some(Boolean)}>${Ico('download')} Importer</button>` : null}>
     <p class="hint" style="margin:0">Dans Pronote, exporte les notes de la classe (CSV ou Excel), puis charge le fichier. La date, le barème (total des points) et le coefficient de chaque devoir sont repris, ainsi que les notes de chaque élève.</p>
     <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" onChange=${onFile} />
     ${err ? html`<p class="chip bad" style="white-space:normal">${err}</p>` : null}

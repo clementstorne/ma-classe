@@ -162,7 +162,7 @@ export function PlanPage({ classId, roomId, group }) {
       <span class="grow"></span>
       <button class="btn" onClick=${randomize}>${Ico('shuffle')} Placement aléatoire</button>
       <button class="btn" onClick=${reset}>${Ico('reset')} Réinitialiser</button>
-      <button class="btn" onClick=${exportImage}>${Ico('download')} Exporter</button>
+      <button class="btn" onClick=${exportImage}>${Ico('upload')} Exporter</button>
     </div>
     ${hint ? html`<div class="row" style="margin-bottom:8px"><span class="hint">${hint}</span>${selSeat && plan.seatMap[selSeat] ? html`<button class="btn small" onClick=${() => { edit(p => unplace(p, plan.seatMap[selSeat])); setSelSeat(null); }}>Retirer du plan</button>` : null}</div>` : null}
     <div class="plan-layout">

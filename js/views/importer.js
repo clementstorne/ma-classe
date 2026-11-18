@@ -1,6 +1,7 @@
 import { html, useState, useRef } from '../../vendor/preact-htm.js';
 import { useStore, mutate, setPhoto } from '../store.js';
 import { Modal, Field, toast } from './common.js';
+import { Ico } from '../icons.js';
 import { uid, norm, splitFullName, loadXLSX, resizeImage, byName } from '../util.js';
 
 /* ---------- Lecture de tableaux ---------- */
@@ -95,7 +96,7 @@ export function RosterImport({ classId, onClose }) {
 
   return html`<${Modal} title="Importer des élèves" onClose=${onClose} wide
     foot=${rows ? html`<button class="btn" onClick=${() => setRows(null)}>Retour</button><span class="grow"></span>
-      <button class="btn primary" disabled=${!parsed.length} onClick=${doImport}>Importer ${parsed.length} élève(s)</button>` : null}>
+      <button class="btn primary" disabled=${!parsed.length} onClick=${doImport}>${Ico('download')} Importer ${parsed.length} élève(s)</button>` : null}>
     ${!rows ? html`
       <p class="muted">Choisis un fichier CSV, XLS ou XLSX (export Pronote, tableur Google Drive…), ou colle directement des cellules copiées depuis un tableur.</p>
       <input type="file" accept=".csv,.xls,.xlsx,.txt,.tsv,.ods" onChange=${onFile} />
@@ -132,7 +133,7 @@ export function PhotoBatch({ classId, onClose }) {
     }
     setRes({ ok, ko });
   }
-  return html`<${Modal} title="Photos en lot" onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>Fermer</button>`}>
+  return html`<${Modal} title="Importer les photos" onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>Fermer</button>`}>
     <p class="muted">Sélectionne plusieurs photos nommées d'après les élèves (ex. <code>DUPONT Marie.jpg</code>, <code>dupont_marie.png</code>). Elles sont réduites et stockées dans l'application.</p>
     <input type="file" accept="image/*" multiple onChange=${onFiles} />
     ${res ? html`<p><b>${res.ok.length}</b> photo(s) associée(s).</p>
@@ -257,7 +258,7 @@ export function EvalImport({ classId, onClose, onDone }) {
     onClose();
   }
   return html`<${Modal} title="Importer des évaluations depuis Excel" onClose=${onClose} wide
-    foot=${sheets ? html`<span class="grow"></span><button class="btn primary" onClick=${doImport} disabled=${!Object.values(sel).some(Boolean)}>Importer</button>` : null}>
+    foot=${sheets ? html`<span class="grow"></span><button class="btn primary" onClick=${doImport} disabled=${!Object.values(sel).some(Boolean)}>${Ico('download')} Importer</button>` : null}>
     ${!sheets ? html`<p class="muted">Ouvre un classeur au même format que le tien : une feuille par devoir, élèves en colonnes (« NOM⏎Prénom » en ligne 1), blocs « EXERCICE n », barème en colonne B, <code>x</code> pour une question non évaluée. Les compétences sont déduites des formules de la colonne B quand c'est possible.</p>
       <input type="file" accept=".xlsx,.xls" onChange=${onFile} />${err ? html`<p style="color:var(--ko)">${err}</p>` : null}`
     : html`${sheets.map(sh => {
