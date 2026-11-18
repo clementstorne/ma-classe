@@ -346,3 +346,23 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .cal .cw{flex-direction:column;align-items:flex-start;gap:0}
 .slot .dsb{position:absolute;top:4px;right:5px;font-size:11px;font-weight:800;letter-spacing:.3px;background:rgba(255,255,255,.9);color:#1b2333;padding:0 6px;border-radius:99px}
 .seg.eq{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr}.seg.eq button{padding:0 18px}
+
+.print-area{display:none}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  html,body,#app,.app,.main,.main.fit{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important}
+  .topbar,.page>*:not(.print-area){display:none!important}
+  .main{padding:0!important}
+  .page{display:block!important}
+  .print-area{display:block}
+  .print-area *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-page{break-after:page;page-break-after:always}
+  .print-page:last-child{break-after:auto;page-break-after:auto}
+  .print-page h2{font-size:14px;margin:0 0 6px;color:#1b2333}
+  .print-area .calwrap{overflow:visible;border:1px solid #ccd;border-radius:0;height:auto}
+  .print-area .cal{grid-auto-rows:3px;min-width:0}
+  .print-area .cal>*{position:static!important}
+  .print-area .cblock{box-shadow:none}
+  .print-area .cblock.planned{opacity:.6}
+  .print-area .cp{cursor:default}
+}

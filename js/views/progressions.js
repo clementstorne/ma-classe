@@ -167,38 +167,53 @@ function Chips({ d, level, ch, late, hours }) {
 }
 
 /* ---------- Calendrier ---------- */
-function Calendar({ d, levels }) {
-  const { weeks, blocks, over, nowWeek } = layout(d, levels);
+function Calendar({ d, levels, from = 0, to = Infinity, print = false }) {
+  const { weeks: allWeeks, blocks, over, nowWeek } = layout(d, levels);
+  const last = Math.min(to, allWeeks.length - 1), weeks = allWeeks.filter(w => w.i >= from && w.i <= last);
   const wrap = useRef();
   const parts = d.settings.parts || [];
   const partOf = id => parts.find(p => p.id === id);
   useEffect(() => {
+    if (print) return;
     const el = wrap.current && wrap.current.querySelector('.cal-now');
     if (el) wrap.current.scrollTop = Math.max(0, el.offsetTop - 140);
   }, [levels.join(',')]);
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 4;
-  const nw = Math.max(30, 14 + 9 * String(weeks.length).length), dw = 140;
-  const vacSpan = w => { let n = 1; while (weeks[w.i + n]?.vac === w.vac) n++; return n; };
-  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `${nw}px ${dw}px ${ab ? 34 : 0}px repeat(${levels.length}, minmax(170px, 1fr))`, minWidth: nw + dw + (ab ? 34 : 0) + 170 * levels.length + "px" }}>
+  const nw = Math.max(30, 14 + 9 * String(allWeeks.length).length), dw = 140;
+  const vacSpan = w => { let n = 1; while (allWeeks[w.i + n]?.vac === w.vac && w.i + n <= last) n++; return n; };
+  const base = from * R, top = (last + 1) * R - 1;
+  return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `${nw}px ${dw}px ${ab ? 34 : 0}px repeat(${levels.length}, minmax(${print ? 120 : 170}px, 1fr))`, minWidth: print ? 0 : nw + dw + (ab ? 34 : 0) + 170 * levels.length + "px" }}>
     <div class="ch ch-w" style="grid-row:1;grid-column:1/4">Semaine</div>
-    ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
+    ${levels.map((lv, i) => html`<div class="ch" key=${lv} style=${{ gridRow: 1, gridColumn: gcol(i) }}>${lv}${over[lv] && !print ? html` <span class="chip" title="Chapitres au-delà de la fin de l'année">+${over[lv]}</span>` : ''}</div>`)}
     ${weeks.map(w => {
-      const r = R * w.i + 2, now = w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
+      const r = R * (w.i - from) + 2, now = !print && w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
       return html`<div key=${'n' + w.i} class=${'cn' + (now ? ' cal-now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 1 }}>${w.i + 1}</div>
         <div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 2, left: nw + 'px' }}><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
         <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 3, left: nw + dw + 'px' }}>${w.vac ? '' : L || ''}</div>
         <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: `4 / ${levels.length + 4}` }}></div>
-        ${w.vac && weeks[w.i - 1]?.vac !== w.vac ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${R * vacSpan(w)}`, gridColumn: `4 / ${levels.length + 4}` }}>${w.vac}</div>` : null}`;
+        ${w.vac && (allWeeks[w.i - 1]?.vac !== w.vac || w.i === from) ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${R * vacSpan(w)}`, gridColumn: `4 / ${levels.length + 4}` }}>${w.vac}</div>` : null}`;
     })}
     ${levels.map((lv, i) => blocks[lv].map(b => {
+      const b0 = Math.max(b.row0, base), b1 = Math.min(b.row1, top);
+      if (b0 > b1) return null;
+      const cutTop = b.row0 < base, cutBot = b.row1 > top;
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
-      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 + 1 < R ? ' short' : '') + (b.row1 - b.row0 + 1 < R / 2 ? ' tiny' : '') + (b.cont ? ' ct cont' : '') + (b.last === false ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
-        ${b.cont ? null : html`<small>Chapitre ${b.n}</small><b>${b.ch.title}</b>`}
-        ${b.last === false ? null : html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>`}</div>`;
+      const n = b1 - b0 + 1, label = !b.cont || cutTop, chips = b.last !== false && !cutBot;
+      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (n < R ? ' short' : '') + (n < R / 2 ? ' tiny' : '') + ((b.cont && !cutTop) || cutTop ? ' ct' : '') + (b.cont && !cutTop ? ' cont' : '') + (b.last === false || cutBot ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b0 - base + 2} / ${b1 - base + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
+        ${label ? html`<small>Chapitre ${b.n}</small><b>${b.ch.title}</b>` : null}
+        ${chips ? html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>` : null}</div>`;
     }))}
   </div></div>`;
+}
+
+/** Version imprimable : le calendrier découpé en pages de 10 semaines (A4 paysage). */
+function PrintCalendars({ d, levels }) {
+  const n = calWeeks(d).length, per = 10, pages = [];
+  for (let f = 0; f < n; f += per) pages.push(f);
+  return html`<div class="print-area">${pages.map(f => html`<section class="print-page" key=${f}>
+    <h2>Progressions · semaines ${f + 1} à ${Math.min(n, f + per)}</h2><${Calendar} d=${d} levels=${levels} from=${f} to=${f + per - 1} print=${true} /></section>`)}</div>`;
 }
 
 /* ---------- Liste des chapitres d'un niveau ---------- */
@@ -248,6 +263,14 @@ export function Progressions() {
   const [view, setView] = useState('cal');
   const [lvl, setLvl] = useState('');
   const [parts, setParts] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    if (!printing) return;
+    const done = () => setPrinting(false);
+    window.addEventListener('afterprint', done);
+    const t = setTimeout(() => window.print(), 200);
+    return () => { clearTimeout(t); window.removeEventListener('afterprint', done); };
+  }, [printing]);
   const level = levels.includes(lvl) ? lvl : levels[0];
   function addChapter() {
     if (!level) return;
@@ -257,12 +280,14 @@ export function Progressions() {
     <div class="page-head">
       <div class="seg eq"><button class=${view === 'cal' ? 'on P' : ''} onClick=${() => setView('cal')}>Calendrier</button><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button></div>
       <span class="grow"></span>
+      ${view === 'cal' && d.chapters.length ? html`<button class="btn" onClick=${() => setPrinting(true)}>${Ico('upload')} Exporter en PDF</button>` : null}
       <button class="btn" onClick=${() => setParts(true)}>${Ico('layout')} Parties du programme</button>
       ${view === 'list' ? html`<button class="btn primary" disabled=${!level} onClick=${addChapter}>${Ico('plus')} Ajouter un chapitre</button>` : null}</div>
     ${view === 'list' && levels.length ? html`<div class="tabs">${levels.map(l => html`<a key=${l} class=${l === level ? 'on' : ''} href="javascript:void 0" onClick=${e => { e.preventDefault(); setLvl(l); }}>${l} <span class="muted">(${chaptersOf(d, l).length})</span></a>`)}</div>` : null}
     ${!levels.length ? html`<${Empty} title="Aucune classe" />`
       : view === 'cal' ? (d.chapters.length ? html`<${Calendar} d=${d} levels=${levels.filter(l => chaptersOf(d, l).length)} />` : html`<${Empty} title="Aucun chapitre" />`)
       : html`<${ChapterList} d=${d} level=${level} />`}
+    ${printing ? html`<${PrintCalendars} d=${d} levels=${levelsOf(d).filter(l => chaptersOf(d, l).length)} />` : null}
     ${parts ? html`<${PartsModal} onClose=${() => setParts(false)} />` : null}
   </div>`;
 }
