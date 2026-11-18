@@ -31,7 +31,7 @@ function App() {
   return html`<div class="app">
     <header class="topbar"><span class="brand"><img src="icons/favicon.png" alt="" class="logo" />Ma classe</span>
       <nav class="nav">${N('edt', '#/', html`${Ico('cal')} Emploi du temps`)}${N('classes', '#/classes', html`${Ico('users')} Classes`)}${N('salles', '#/salles', html`${Ico('door')} Salles`)}</nav><span class="grow"></span><nav class="nav">${N('settings', '#/settings', html`${Ico('gear')} Paramètres`)}</nav></header>
-    <main class=${'main' + (nav === 'edt' && !a ? ' fit' : '')}>${view}</main></div>`;
+    <main class=${'main' + ((nav === 'edt' && !a) || (a === 'class' && c === 'suivi') ? ' fit' : '')}>${view}</main></div>`;
 }
 
 init().then(() => render(html`<${App} />`, document.getElementById('app')));

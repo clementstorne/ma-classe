@@ -289,3 +289,7 @@ table.g.suivi td.hot{background:var(--ko-soft)} table.g.suivi td.warm{background
 .plan-thumb .pt.off{border:1px solid color-mix(in srgb,var(--muted) 55%,transparent);background:color-mix(in srgb,var(--card) 70%,transparent)}
 .plan-thumb .pt.on{background:color-mix(in srgb,var(--accent) 65%,var(--card));border:1px solid var(--accent)}
 .plan-thumb .pt.lb{display:flex;align-items:center;justify-content:center;font-size:3.2cqw;font-weight:700;color:var(--muted);text-transform:uppercase;border:1px solid var(--muted);background:color-mix(in srgb,var(--card) 80%,transparent)}
+.page.fitcol{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}
+.page.fitcol>*{flex:none}
+.page.fitcol>.gridwrap{flex:1 1 auto;min-height:0;max-height:none}
+table.g.suivi .stk{left:auto}
