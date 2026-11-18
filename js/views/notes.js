@@ -42,18 +42,20 @@ export function NotesTab({ cls }) {
     return v.length ? f1(v.reduce((a, b) => a + b, 0) / v.length) : '';
   };
 
+  // Même règle que Pronote : (Σ note × coef) / (Σ barème × coef) × 20, sur les notes présentes (absents et cases vides ignorés).
   const moyenne = s => {
     let num = 0, den = 0;
     for (const c of cols) {
       const v = value(c, s), k = coefOf(c);
       if (typeof v !== 'number' || !(k > 0)) continue;
-      const mx = c.kind === 'eval' ? studentStats(c.ev, s.id, d.settings.comps, s).noteMax : c.max; // chaque note est ramenée sur 20 pour la moyenne
-      if (mx > 0) { num += v / mx * 20 * k; den += k; }
+      const mx = c.kind === 'eval' ? studentStats(c.ev, s.id, d.settings.comps, s).noteMax : c.max;
+      if (mx > 0) { num += v * k; den += mx * k; }
     }
-    return den ? num / den : null;
+    return den ? num / den * 20 : null;
   };
   const moys = studs.map(moyenne).filter(x => x != null);
-  const moyClasse = moys.length ? f1(moys.reduce((a, b) => a + b, 0) / moys.length) : '';
+  const f10 = v => fmtNum(Math.round(v * 10) / 10);
+  const moyClasse = moys.length ? f10(moys.reduce((a, b) => a + b, 0) / moys.length) : '';
   function setCoef(c, raw) {
     const x = raw.trim() === '' ? 1 : Number(raw.replace(',', '.'));
     if (!Number.isFinite(x) || x < 0) return false;
@@ -88,7 +90,7 @@ export function NotesTab({ cls }) {
       ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>＋ Note</button>
       <button class="btn" onClick=${() => setImp(true)}>⬆ Importer (Pronote)</button></div>
-    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20) ramène chaque note sur 20, applique les coefficients et ignore les absents.</p>
+    <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20, arrondie au dixième) se calcule comme dans Pronote : total des points pondérés rapporté au total des barèmes pondérés ; les absents sont ignorés.</p>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
     : html`<div class="gridwrap"><table class="g" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px' }}>
@@ -107,7 +109,7 @@ export function NotesTab({ cls }) {
           onFocus=${e => e.target.select()}
           onBlur=${e => { if (!setScore(c.n, s.id, e.target.value)) e.target.classList.add('bad'); }}
           onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); const t = e.target.closest('tr').nextElementSibling; const i = e.target.closest('td').cellIndex; const nx = t && t.cells[i] && t.cells[i].querySelector('input'); e.target.blur(); if (nx) nx.focus(); } }} /></td>`;
-      })}<td class="tot">${(m => m == null ? '' : f1(m))(moyenne(s))}</td></tr>`)}</tbody>
+      })}<td class="tot">${(m => m == null ? '' : f10(m))(moyenne(s))}</td></tr>`)}</tbody>
       <tfoot><tr><th class="stk">Moyenne</th>${cols.map(c => html`<td>${avg(c)}</td>`)}<td class="tot">${moyClasse}</td></tr></tfoot></table></div>`}
     ${imp ? html`<${PronoteImport} cls=${cls} onClose=${() => setImp(false)} onDone=${() => setPer('all')} />` : null}
     ${form ? html`<${Modal} title=${form.id ? 'Modifier la note' : 'Nouvelle note'} onClose=${() => setForm(null)}
