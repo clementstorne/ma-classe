@@ -60,12 +60,19 @@ function layout(d, levels) {
   return { weeks, blocks, over, nowWeek };
 }
 
-/** Avancement d'une classe, déduit des séances : le chapitre de la dernière séance est « en cours », les autres chapitres déjà travaillés sont « terminés ». */
-export function progressOf(d, classId) {
-  const ses = Object.values(d.sessions).filter(x => x.classId === classId && x.chapterId).sort((a, b) => a.date.localeCompare(b.date));
+const chIds = x => x.chapterIds || (x.chapterId ? [x.chapterId] : []);
+export const sessionChapters = chIds;
+
+/** Avancement d'une classe, déduit des séances : le chapitre le plus avancé de la dernière séance est « en cours », tous les autres chapitres travaillés sont « terminés ». */
+export function progressOf(d, classId, excludeKey) {
+  const order = Object.fromEntries(d.chapters.map((c, i) => [c.id, i]));
+  const ses = Object.values(d.sessions).filter(x => x.classId === classId && x.key !== excludeKey && chIds(x).some(id => id in order)).sort((a, b) => a.date.localeCompare(b.date));
   const out = {};
-  for (const x of ses) out[x.chapterId] = 'done';
-  if (ses.length) out[ses[ses.length - 1].chapterId] = 'doing';
+  for (const x of ses) for (const id of chIds(x)) if (id in order) out[id] = 'done';
+  if (ses.length) {
+    const ids = chIds(ses[ses.length - 1]).filter(id => id in order).sort((a, b) => order[a] - order[b]);
+    out[ids[ids.length - 1]] = 'doing';
+  }
   return out;
 }
 const STATUS_GLYPH = { doing: '◐', done: '✓' };
@@ -123,7 +130,7 @@ function ChapterList({ d, level }) {
     if (q < 0 || q >= idxs.length) return;
     const a = idxs[p], b = idxs[q]; [dd.chapters[a], dd.chapters[b]] = [dd.chapters[b], dd.chapters[a]];
   });
-  const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const x of Object.values(dd.sessions)) if (x.chapterId === ch.id) delete x.chapterId; }); };
+  const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const x of Object.values(dd.sessions)) { if (x.chapterId === ch.id) delete x.chapterId; if (x.chapterIds) { x.chapterIds = x.chapterIds.filter(i => i !== ch.id); if (!x.chapterIds.length) delete x.chapterIds; } } }); };
   const total = list.reduce((n, c) => n + (c.weeks || 1), 0);
   if (!list.length) return html`<${Empty} title=${'Aucun chapitre en ' + level} />`;
   return html`<div class="list chscroll">${list.map((ch, i) => {

@@ -3,7 +3,7 @@ import { useStore, mutate, classById, groupStudents, studentsOf, roomsFor, sessi
 import { Modal, Avatar, Empty } from './common.js';
 import { PlanCanvas } from './plan.js';
 import { StudentSheet } from './student.js';
-import { levelOf, chaptersFor } from './progressions.js';
+import { levelOf, chaptersFor, progressOf, sessionChapters } from './progressions.js';
 import { fmtDateLong, uid, displayName, seatLabels } from '../util.js';
 
 export function Appel({ classId, date, slotId }) {
@@ -36,7 +36,17 @@ export function Appel({ classId, date, slotId }) {
     });
   }
   const chapters = chaptersFor(d, levelOf(cls));
-  const setChapter = v => mutate(dd => { const s = ensure(dd); if (v) s.chapterId = v; else delete s.chapterId; });
+  const picked = se ? sessionChapters(se) : [];
+  const prog = progressOf(d, classId, key);
+  const curId = (chapters.find(c => prog[c.id] === 'doing') || {}).id;
+  const nextId = (chapters.slice(curId ? chapters.findIndex(c => c.id === curId) + 1 : 0).find(c => !prog[c.id]) || {}).id;
+  const shown = chapters.filter(c => c.id === curId || c.id === nextId || picked.includes(c.id));
+  const toggleChapter = id => mutate(dd => {
+    const s = ensure(dd), cur = sessionChapters(s);
+    s.chapterIds = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+    delete s.chapterId; if (!s.chapterIds.length) delete s.chapterIds;
+  });
+  const others = chapters.filter(c => !shown.includes(c));
   const validate = () => mutate(dd => { ensure(dd).validated = true; });
   const nA = studs.filter(s => statusOf(s.id) === 'A').length, nR = studs.filter(s => statusOf(s.id) === 'R').length;
 
@@ -59,7 +69,8 @@ export function Appel({ classId, date, slotId }) {
       <div class="seg"><button class=${view === 'list' ? 'on P' : ''} onClick=${() => setView('list')}>Liste</button><button class=${view === 'plan' ? 'on P' : ''} onClick=${() => setView('plan')}>Plan</button></div></div>
     <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">${studs.length - nA - nR} présent${studs.length - nA - nR > 1 ? 's' : ''}</span><span class="counter a">${nA} absent${nA > 1 ? 's' : ''}</span><span class="counter r">${nR} retard${nR > 1 ? 's' : ''}</span>
       <span class="counter">📝 ${ev('devoir').length}</span><span class="counter">🎒 ${ev('materiel').length}</span></div><span class="grow"></span>
-      ${chapters.length ? html`<select class="inp" style="width:auto;max-width:300px" value=${(se && se.chapterId) || ''} onChange=${e => setChapter(e.target.value)}><option value="">Chapitre travaillé…</option>${chapters.map((c, i) => html`<option value=${c.id}>${i + 1}. ${c.title}</option>`)}</select>` : null}
+      ${chapters.length ? html`<div class="chsel">${shown.map(c => html`<button key=${c.id} class=${'btn' + (picked.includes(c.id) ? ' primary' : '')} title=${c.id === curId ? 'Chapitre en cours' : c.id === nextId ? 'Prochain chapitre' : ''} onClick=${() => toggleChapter(c.id)}>${chapters.indexOf(c) + 1}. ${c.title}</button>`)}
+        ${others.length ? html`<select class="inp" style="width:auto;max-width:200px" value="" onChange=${e => { if (e.target.value) toggleChapter(e.target.value); }}><option value="">Autre chapitre…</option>${others.map(c => html`<option value=${c.id}>${chapters.indexOf(c) + 1}. ${c.title}</option>`)}</select>` : null}</div>` : null}
       ${se && se.validated ? html`<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Appel enregistré</span>` : html`<button class="btn primary" onClick=${validate}>✓ Tous présents / valider</button>`}</div>
     ${!studs.length ? html`<${Empty} title=${slot && slot.group ? 'Aucun élève dans le groupe ' + slot.group : 'Aucun élève dans cette classe'}><//>` : null}
     ${view === 'list' ? html`<div class="appel-grid">${studs.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>
