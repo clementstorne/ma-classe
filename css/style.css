@@ -237,9 +237,10 @@ table.g td.q.absent{background:repeating-linear-gradient(135deg,transparent 0 6p
 .slot .wk{position:absolute;top:4px;right:5px;width:19px;height:19px;border-radius:5px;background:rgba(255,255,255,.95);color:#1b2333;font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
 .slot.cancelled .wk{background:var(--card)}
 
-table.notes th.moy,table.notes td.moy{position:sticky;left:160px;z-index:2;background:color-mix(in srgb,var(--accent) 16%,var(--card));color:var(--text);font-weight:800;font-size:15px;border-right:2px solid var(--accent)}
+table.notes th.moy,table.notes td.moy{position:sticky;left:160px;z-index:2;background:color-mix(in srgb,var(--cc,var(--accent)) 24%,var(--card));color:var(--text);font-weight:800;font-size:15px;border-right:3px solid var(--cc,var(--accent))}
 table.notes thead th.moy{z-index:4;font-size:13px}
 table.notes thead th.moy small{font-weight:600;color:var(--muted)}
 table.notes tfoot td.moy{z-index:4;color:var(--text)}
 table.notes td.cw{position:relative}
-table.notes .mxa{position:absolute;right:4px;bottom:2px;font-size:10px;font-weight:500;color:var(--muted);pointer-events:none}
+table.notes .mxa{position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:1;font-size:10px;font-weight:500;color:var(--muted);pointer-events:none}
+table.notes td.cw{padding-right:22px}

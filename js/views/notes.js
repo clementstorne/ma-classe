@@ -3,7 +3,7 @@ import { useStore, mutate, studentsOf, groupsOf, etabOf, currentPeriod } from '.
 import { studentStats } from '../logic.js';
 import { Modal, Field, Empty, PeriodSelect, toast } from './common.js';
 import { go } from '../router.js';
-import { uid, todayISO, fmtNum, fmtDateShort, seatLabels, norm, splitFullName } from '../util.js';
+import { uid, todayISO, fmtNum, fmtDateShort, seatLabels, norm, splitFullName, classColor } from '../util.js';
 import { readTable } from './importer.js';
 
 const FIRST_W = 160, COL_W = 88;
@@ -94,7 +94,7 @@ export function NotesTab({ cls }) {
     <p class="hint">Les notes des évaluations détaillées (onglet Évaluations) apparaissent ici automatiquement, avec leur note en points (ramenée sur 20 seulement pour les élèves avec aménagement). Les autres notes se saisissent directement dans la colonne (« A » pour un absent). La ligne « Coef. » règle le coefficient de chaque note ; la moyenne (sur 20) se calcule et s'arrondit comme dans Pronote (total des points pondérés rapporté au total des barèmes pondérés, arrondi au dixième supérieur) ; les absents sont ignorés.</p>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
     : !cols.length ? html`<${Empty} title="Aucune note sur cette période"><p>Ajoute une note avec « ＋ Note », ou crée une évaluation détaillée.</p><//>`
-    : html`<div class="gridwrap"><table class="g notes" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px' }}>
+    : html`<div class="gridwrap"><table class="g notes" style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>
       <colgroup><col style=${{ width: FIRST_W + 'px' }} /><col style=${{ width: COL_W + 'px' }} />${cols.map(() => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       <thead><tr><th class="stk">Élève</th><th class="moy" style="height:58px">Moyenne<br /><small>/20</small></th>${cols.map(c => html`<th key=${c.id} style="height:58px;cursor:pointer;line-height:1.25"
           onClick=${() => c.kind === 'eval' ? go('/eval/' + c.id) : setForm({ id: c.id, name: c.name, date: c.date, max: String(c.max) })}
