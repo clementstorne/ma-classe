@@ -49,6 +49,22 @@ export function evalAverage(ev, studentIds, comps, byId = {}) {
   return notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null;
 }
 
+/** Synthèse d'une évaluation : effectif noté, moyenne, min, médiane, max, barème, et répartition des élèves par niveau (1 à 4) pour chaque compétence. */
+export function evalSummary(ev, studentIds, comps, byId = {}) {
+  const sts = studentIds.map(id => studentStats(ev, id, comps, byId[id]));
+  const notes = sts.map(s => s.note).filter(n => n != null).sort((a, b) => a - b);
+  const n = notes.length;
+  const med = !n ? null : n % 2 ? notes[(n - 1) / 2] : (notes[n / 2 - 1] + notes[n / 2]) / 2;
+  const dist = {};
+  for (const c of comps) {
+    const arr = [0, 0, 0, 0];
+    for (const s of sts) if (s.levels[c] != null) arr[s.levels[c] - 1]++;
+    if (c) dist[c] = arr;
+  }
+  return { n, avg: n ? notes.reduce((a, b) => a + b, 0) / n : null, min: n ? notes[0] : null, max: n ? notes[n - 1] : null, med, dist,
+    barème: ev.exercises.reduce((t, x) => t + x.questions.reduce((m, q) => m + q.max, 0), 0) };
+}
+
 export function questionAverage(ev, q, studentIds) {
   const vals = studentIds.map(id => (ev.scores[id] || {})[q.id]).filter(v => typeof v === 'number');
   if (!vals.length) return null;

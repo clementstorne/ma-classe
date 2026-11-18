@@ -6,9 +6,9 @@ import { LEVELS } from './progressions.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { NotesTab } from './notes.js';
-import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
+import { RosterImport, PhotoBatch } from './importer.js';
 import { uid, CLASS_COLORS, classColor, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum, seatLabels } from '../util.js';
-import { suiviStats, evalAverage } from '../logic.js';
+import { suiviStats, evalSummary } from '../logic.js';
 import { go } from '../router.js';
 import { Ico } from '../icons.js';
 
@@ -48,7 +48,7 @@ export function ClassFolder({ id, tab, q }) {
   const d = useStore();
   const cls = classById(d, id);
   const [sheet, setSheet] = useState(null);
-  const [imp, setImp] = useState(false), [photos, setPhotos] = useState(false), [evImp, setEvImp] = useState(false);
+  const [imp, setImp] = useState(false), [photos, setPhotos] = useState(false);
   const [edit, setEdit] = useState(null);
   const [addStu, setAddStu] = useState(null);
   if (!cls) return html`<${Empty} title="Classe introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
@@ -89,13 +89,12 @@ export function ClassFolder({ id, tab, q }) {
     <div class="tabs eq">${T('eleves', 'users', 'Élèves')}${T('suivi', 'chart', 'Suivi')}${T('notes', 'pen', 'Notes')}${T('evaluations', 'clip', 'Évaluations')}${T('plans', 'layout', 'Plans de classe')}</div>
     ${tab === 'suivi' ? html`<${Suivi} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onOpen=${setSheet} />`
       : tab === 'notes' ? html`<${NotesTab} cls=${cls} />`
-      : tab === 'evaluations' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
+      : tab === 'evaluations' ? html`<${NotesList} cls=${cls} studs=${studs} />`
       : tab === 'plans' ? html`<${PlansList} cls=${cls} />`
       : html`<${Roster} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onSheet=${setSheet} onImport=${() => setImp(true)} onAdd=${() => setAddStu({ nom: '', prenom: '' })} onPhotos=${() => setPhotos(true)} />`}
     ${sheet ? html`<${StudentSheet} sid=${sheet} onClose=${() => setSheet(null)} />` : null}
     ${imp ? html`<${RosterImport} classId=${id} onClose=${() => setImp(false)} />` : null}
     ${photos ? html`<${PhotoBatch} classId=${id} onClose=${() => setPhotos(false)} />` : null}
-    ${evImp ? html`<${EvalImport} classId=${id} onClose=${() => setEvImp(false)} />` : null}
     ${addStu ? html`<${Modal} title="Nouvel élève" onClose=${() => setAddStu(null)} foot=${html`<button class="btn primary" onClick=${newStudent}>Ajouter</button>`}>
       <${Field} label="Nom"><input value=${addStu.nom} onInput=${e => setAddStu({ ...addStu, nom: e.target.value })} /><//>
       <${Field} label="Prénom"><input value=${addStu.prenom} onInput=${e => setAddStu({ ...addStu, prenom: e.target.value })} /><//><//>` : null}
@@ -136,7 +135,7 @@ function Suivi({ cls, studs, onOpen, initial }) {
       <tfoot><tr><th class="stk" style="text-align:left">Total</th><td>${tot('dev')}</td><td>${tot('mat')}</td><td>${tot('abs')}</td><td>${tot('ret')}</td></tr></tfoot></table></div>`;
 }
 
-function NotesList({ cls, studs, onImport }) {
+function NotesList({ cls, studs }) {
   const d = useStore();
   const evs = d.evals.filter(e => e.classId === cls.id).sort((a, b) => b.date.localeCompare(a.date));
   const etab = etabOf(d, cls);
@@ -146,15 +145,24 @@ function NotesList({ cls, studs, onImport }) {
     mutate(dd => dd.evals.push(ev));
     go(`/eval/${ev.id}?edit=1`);
   }
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>${Ico('plus')} Nouvelle évaluation</button>
-    <button class="btn" onClick=${onImport}>${Ico('download')} Importer depuis Excel</button></div>
+  const byId = Object.fromEntries(studs.map(s => [s.id, s]));
+  const ids = studs.map(s => s.id), comps = d.settings.comps;
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>${Ico('plus')} Créer une évaluation</button></div>
     ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
-    : html`<div class="list">${evs.map(ev => {
-        const avg = evalAverage(ev, studs.map(s => s.id), d.settings.comps, Object.fromEntries(studs.map(s => [s.id, s])));
+    : html`<div class="eval-cards">${evs.map(ev => {
+        const sm = evalSummary(ev, ids, comps, byId);
         const per = (etab.periods || []).find(p => ev.date >= p.start && ev.date <= p.end);
-        return html`<div class="item" key=${ev.id} onClick=${() => go('/eval/' + ev.id)}><div class="grow"><b>${ev.name}</b>
-          <div class="muted small">${fmtDateShort(ev.date)}${per ? ' · ' + per.name : ''} · ${ev.exercises.reduce((n, x) => n + x.questions.length, 0)} questions</div></div>
-          <span class="chip">${avg == null ? 'pas de note' : 'moy. ' + fmtNum(avg)}</span><span class="muted">›</span></div>`;
+        const used = comps.filter(c => ev.exercises.some(x => x.questions.some(q => (q.comps || []).includes(c))));
+        return html`<div class="card eval-card" key=${ev.id} onClick=${() => go('/eval/' + ev.id)}>
+          <div class="eval-head"><b>${ev.name}</b><span class="muted small">${fmtDateShort(ev.date)}${per ? ' · ' + per.name : ''}</span></div>
+          ${sm.n ? html`<div class="eval-stats">
+            <div class="es main"><span>Moyenne</span><b>${fmtNum(sm.avg)}</b><i>/ ${fmtNum(sm.barème)}</i></div>
+            <div class="es"><span>Min</span><b>${fmtNum(sm.min)}</b></div>
+            <div class="es"><span>Médiane</span><b>${fmtNum(sm.med)}</b></div>
+            <div class="es"><span>Max</span><b>${fmtNum(sm.max)}</b></div></div>` : html`<p class="muted small" style="margin:10px 0">Pas encore de note</p>`}
+          ${sm.n && used.length ? html`<div class="eval-comps">${used.map(c => { const a = sm.dist[c] || [0, 0, 0, 0], t = a.reduce((x, y) => x + y, 0) || 1;
+            return html`<div class="ec" key=${c}><span>${c}</span><div class="ecbar" title=${a.map((n, i) => 'niveau ' + (i + 1) + ' : ' + n).join(' · ')}>${a.map((n, i) => n ? html`<i class=${'lv-' + (i + 1)} style=${{ width: n / t * 100 + '%' }}></i>` : null)}</div></div>`; })}</div>` : null}
+        </div>`;
       })}</div>`}`;
 }
 
