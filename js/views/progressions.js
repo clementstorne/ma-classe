@@ -49,7 +49,7 @@ function taughtOf(d, lv) {
   for (const c of d.classes.filter(c => levelOf(c) === lv)) {
     const per = {}, sessions = [];
     for (const x of Object.values(d.sessions)) if (x.classId === c.id) {
-      const ids = chIds(x).filter(id => id in order); if (!ids.length || x.ds) continue;
+      const ids = chIds(x).filter(id => id in order); if (!ids.length || x.ds || x.ap) continue;
       const o = x.slotId ? occurrence(d, x.slotId, x.date) : null;
       if (o && o.cancelled) continue;
       sessions.push({ date: x.date, ids, h: o ? (toMin(o.end) - toMin(o.start)) / 60 : 1 });
@@ -145,7 +145,7 @@ const cycle = (d, cid, chid) => {
 export function hoursOf(d, classId) {
   const out = {};
   for (const x of Object.values(d.sessions)) {
-    const ids = chIds(x); if (x.classId !== classId || !ids.length || !x.slotId || x.ds) continue;
+    const ids = chIds(x); if (x.classId !== classId || !ids.length || !x.slotId || x.ds || x.ap) continue;
     const o = occurrence(d, x.slotId, x.date); if (!o || o.cancelled) continue;
     const h = (toMin(o.end) - toMin(o.start)) / 60;
     for (const id of ids) out[id] = (out[id] || 0) + h / ids.length;
