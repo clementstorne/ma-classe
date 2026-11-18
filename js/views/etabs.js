@@ -4,7 +4,7 @@ import { Field, toast } from './common.js';
 import { uid, iso, fromISO, addDays, mondayOf, fmtDateShort } from '../util.js';
 
 /** Page de paramétrage des établissements : nom, découpage, dates des périodes, alternance A/B. */
-export function Etabs() {
+export function Etabs({ embedded } = {}) {
   const d = useStore();
   const setEtab = (id, patch) => mutate(dd => Object.assign(dd.etabs.find(e => e.id === id), patch));
   const setPeriod = (eid, pid, patch) => mutate(dd => Object.assign(dd.etabs.find(e => e.id === eid).periods.find(p => p.id === pid), patch));
@@ -47,8 +47,8 @@ export function Etabs() {
   }
   const thisMonday = mondayOf(new Date());
 
-  return html`<div class="page" style="max-width:860px">
-    <div class="page-head"><h1>Établissements</h1><span class="grow"></span><button class="btn" onClick=${addEtab}>＋ Ajouter un établissement</button></div>
+  return html`<div class=${embedded ? '' : 'page'} style=${embedded ? '' : 'max-width:860px'}>
+    ${embedded ? html`<div class="row" style="margin-bottom:8px"><span class="grow"></span><button class="btn" onClick=${addEtab}>＋ Ajouter un établissement</button></div>` : html`<div class="page-head"><h1>Établissements</h1><span class="grow"></span><button class="btn" onClick=${addEtab}>＋ Ajouter un établissement</button></div>`}
     <p class="hint">Chaque classe est rattachée à un établissement : le suivi (oublis, travaux non faits, absences), les notes et les semaines A/B s'appuient sur ces réglages.</p>
     ${d.etabs.map(e => {
       const warn = issues(e), nCl = d.classes.filter(c => c.etabId === e.id).length;

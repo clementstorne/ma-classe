@@ -3,8 +3,12 @@ import { useStore, mutate, weekLetter, buildBackup, restoreBackup, setPhoto, rem
 import { Modal, Field, toast } from './common.js';
 import { uid, resizeImage, imageSize, shareOrDownload, todayISO, addDays, iso, mondayOf, fmtDateFull } from '../util.js';
 import { go } from '../router.js';
+import { Etabs } from './etabs.js';
 
-export function Settings() {
+const TABS = [['sauvegardes', 'Sauvegardes'], ['vacances', 'Vacances et jours fériés'], ['etablissements', 'Établissements et salles'], ['competences', 'Compétences'], ['donnees', 'Données']];
+
+export function Settings({ tab: t }) {
+  const tab = TABS.some(x => x[0] === t) ? t : 'sauvegardes';
   const d = useStore();
   const file = useRef();
   const [busy, setBusy] = useState(false);
@@ -29,9 +33,11 @@ export function Settings() {
   const stale = !d.lastBackup || Date.now() - d.lastBackup > 14 * 864e5;
 
   return html`<div class="page" style="max-width:860px">
-    <div class="page-head"><h1>Réglages</h1></div>
+    <div class="page-head"><h1>⚙ Réglages</h1></div>
 
-    <h3 style="margin:8px 0">Sauvegarde</h3>
+    <div class="tabs">${TABS.map(([k, l]) => html`<a class=${tab === k ? 'on' : ''} href=${'#/settings/' + k}>${l}</a>`)}</div>
+    ${tab === 'sauvegardes' && html`<div>
+
     <div class="card col">
       <p style="margin:0">Les données sont enregistrées <b>sur cet appareil</b> (iPad ou ordinateur). Pour les mettre à l'abri et les retrouver sur l'autre appareil, exporte un fichier de sauvegarde et range-le dans Google Drive.</p>
       <p style="margin:0" class=${stale ? '' : 'muted'}>${stale ? '⚠ ' : ''}Dernière sauvegarde : <b>${lastB}</b> · taille ≈ ${bytes} Ko</p>
@@ -40,13 +46,15 @@ export function Settings() {
       <p class="hint" style="margin:0"><b>iPad :</b> « Exporter » ouvre la feuille de partage → <i>Enregistrer dans Fichiers</i> → Google Drive. <b>Restaurer</b> ouvre le sélecteur de fichiers, où Drive apparaît aussi. <b>Mac :</b> le fichier part dans Téléchargements ; glisse-le dans Drive.</p>
     </div>
 
-    <h3 style="margin:18px 0 8px">Établissements et périodes</h3>
-    <a class="card row" href="#/etabs" style="text-decoration:none;color:inherit">${d.etabs.map(e => html`<span class="chip">${e.name} · ${e.type}s</span>`)}<span class="grow"></span><b>Gérer les établissements ›</b></a>
-
-    <h3 style="margin:18px 0 8px">Vacances et jours fériés</h3>
+</div>`}
+    ${tab === 'vacances' && html`<div>
+<p class="hint" style="margin:0 0 8px">Ces dates sont communes à tous les établissements : les cours qui tombent ces jours-là n'apparaissent pas dans l'emploi du temps.</p>
     <${Holidays} />
 
-    <h3 style="margin:18px 0 8px">Salles</h3>
+</div>`}
+    ${tab === 'etablissements' && html`<div>
+      <${Etabs} embedded=${true} />
+    <h3 style="margin:22px 0 8px">Salles</h3>
     <p class="hint" style="margin:0 0 8px">Rattache chaque salle à un établissement : seules les salles de l'établissement d'une classe sont proposées pour son emploi du temps et son plan. Tu peux aussi charger l'image du plan de la salle comme fond du plan de classe.</p>
     <div class="list">${d.rooms.map(r => html`<div class="item col" key=${r.id} style="cursor:default;align-items:stretch">
       <div class="row"><input class="inp" style="flex:1;min-width:140px" value=${r.name} onInput=${v => mutate(dd => { dd.rooms.find(x => x.id === r.id).name = v.target.value; })} />
@@ -57,17 +65,22 @@ export function Settings() {
     <div style="margin-top:8px"><button class="btn small" onClick=${() => mutate(dd => dd.rooms.push({ id: uid(), name: 'Salle ' + (dd.rooms.length + 1), items: defaultRoomSeats() }))}>＋ Ajouter une salle</button></div>
     <p class="hint">Le modèle de chaque salle (tables, tableau, bureau) se règle depuis le plan d'une classe, onglet « Modèle de la salle ».</p>
 
-    <h3 style="margin:18px 0 8px">Suivi et compétences</h3>
+</div>`}
+    ${tab === 'competences' && html`<div>
+
     <div class="card col">
       <${Field} label="Seuil d'alerte (nombre d'oublis / travaux non faits sur la période)"><input type="number" min="1" value=${d.settings.threshold} onInput=${v => mutate(dd => { dd.settings.threshold = Math.max(1, Number(v.target.value) || 1); })} /><//>
       <${Field} label="Compétences (séparées par des virgules)"><input value=${d.settings.comps.join(', ')} onChange=${v => mutate(dd => { dd.settings.comps = v.target.value.split(',').map(x => x.trim()).filter(Boolean); })} /><//>
     </div>
 
-    <h3 style="margin:18px 0 8px">Données</h3>
+</div>`}
+    ${tab === 'donnees' && html`<div>
+
     <div class="card row">
       <button class="btn" onClick=${() => { if (confirm('Ajouter une classe d\'exemple (élèves fictifs) pour tester ?')) { loadDemo(); go('/classes'); } }}>Charger une classe d'exemple</button>
       <button class="btn danger" onClick=${async () => { if (confirm('Effacer TOUTES les données de cet appareil ?') && confirm('Vraiment tout effacer ? Pense à exporter une sauvegarde avant.')) { await resetAll(); toast('Données effacées'); } }}>Tout effacer</button>
     </div>
+</div>`}
     <p class="hint" style="margin-top:14px">Ma classe · version 0.1 (prototype). Fonctionne hors connexion une fois installée.</p>
   </div>`;
 }
@@ -138,7 +151,6 @@ function Holidays() {
       <${Field} label="Nom"><input value=${f.name} placeholder="ex. Vacances de Noël" onInput=${e => setF({ ...f, name: e.target.value })} /><//>
       <${Field} label="Du"><input type="date" value=${f.start} onInput=${e => setF({ ...f, start: e.target.value })} /><//>
       <${Field} label="Au (inclus, facultatif)"><input type="date" value=${f.end} onInput=${e => setF({ ...f, end: e.target.value })} /><//>
-      <${Field} label="Établissement"><select value=${f.etabId} onChange=${e => setF({ ...f, etabId: e.target.value })}><option value="">Les deux</option>${d.etabs.map(e => html`<option value=${e.id}>${e.name}</option>`)}</select><//>
       <button class="btn primary" onClick=${add}>＋ Ajouter</button></div>
     <div class="row"><button class="btn" onClick=${fr}>Ajouter les jours fériés français de l'année scolaire</button></div>
     ${list.length ? html`<div class="list">${list.map(h => html`<div class="item" key=${h.id} style="cursor:default"><div class="nm"><b>${h.name}</b>

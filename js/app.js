@@ -1,13 +1,12 @@
 import { html, render } from '../vendor/preact-htm.js';
 import { init, useStore, S } from './store.js';
-import { useRoute } from './router.js';
+import { useRoute, go } from './router.js';
 import { Schedule } from './views/schedule.js';
 import { ClassList, ClassFolder } from './views/classes.js';
 import { Appel } from './views/appel.js';
 import { PlanPage } from './views/plan.js';
 import { Eval } from './views/eval.js';
 import { Settings } from './views/settings.js';
-import { Etabs } from './views/etabs.js';
 
 function App() {
   const d = useStore();
@@ -21,13 +20,13 @@ function App() {
   else if (a === 'appel') { view = html`<${Appel} key=${b + c + e} classId=${b} date=${c} slotId=${e || 'x'} />`; nav = 'edt'; }
   else if (a === 'plan') { view = html`<${PlanPage} key=${b + c} classId=${b} roomId=${c} />`; nav = 'classes'; }
   else if (a === 'eval') { view = html`<${Eval} key=${b} id=${b} q=${q} />`; nav = 'classes'; }
-  else if (a === 'etabs') { view = html`<${Etabs} />`; nav = 'etabs'; }
-  else if (a === 'settings') { view = html`<${Settings} />`; nav = 'settings'; }
+  else if (a === 'etabs') { go('/settings/etablissements'); view = null; nav = "settings"; }
+  else if (a === 'settings') { view = html`<${Settings} tab=${b} />`; nav = 'settings'; }
   else view = html`<${Schedule} />`;
   const N = (k, href, label) => html`<a class=${nav === k ? 'on' : ''} href=${href}>${label}</a>`;
   return html`<div class="app">
     <header class="topbar"><span class="brand">Ma classe</span>
-      <nav class="nav">${N('edt', '#/', 'Emploi du temps')}${N('classes', '#/classes', 'Classes')}${N('etabs', '#/etabs', 'Établissements')}${N('settings', '#/settings', 'Réglages')}</nav></header>
+      <nav class="nav">${N('edt', '#/', 'Emploi du temps')}${N('classes', '#/classes', 'Classes')}</nav><span class="grow"></span><nav class="nav">${N('settings', '#/settings', html`<span class="ico">⚙</span> Réglages`)}</nav></header>
     <main class="main">${view}</main></div>`;
 }
 
