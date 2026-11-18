@@ -37,7 +37,7 @@ export function Appel({ classId, date, slotId }) {
   }
   const chapters = chaptersFor(d, levelOf(cls));
   const picked = se ? sessionChapters(se) : [];
-  const prog = progressOf(d, classId, key);
+  const prog = progressOf(d, classId, key, false, date);
   const curId = (chapters.find(c => prog[c.id] === 'doing') || {}).id;
   const nextId = (chapters.slice(curId ? chapters.findIndex(c => c.id === curId) + 1 : 0).find(c => !prog[c.id]) || {}).id;
   const shown = chapters.filter(c => c.id === curId || c.id === nextId || picked.includes(c.id));

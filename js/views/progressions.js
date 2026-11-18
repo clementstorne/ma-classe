@@ -122,16 +122,18 @@ function layout(d, levels) {
 }
 
 /** Avancement d'une classe, déduit des séances : le chapitre le plus avancé de la dernière séance est « en cours », tous les autres chapitres travaillés sont « terminés ». */
-export function progressOf(d, classId, excludeKey, raw) {
+export function progressOf(d, classId, excludeKey, raw, before) {
   const order = Object.fromEntries(d.chapters.map((c, i) => [c.id, i]));
-  const ses = Object.values(d.sessions).filter(x => x.classId === classId && x.key !== excludeKey && chIds(x).some(id => id in order)).sort((a, b) => a.date.localeCompare(b.date));
+  // `before` : avancement tel qu'il était à cette date (séances antérieures) ; les corrections manuelles ne s'appliquent que s'il n'y a pas de séance plus récente
+  const later = before && Object.values(d.sessions).some(x => x.classId === classId && x.key !== excludeKey && x.date > before && chIds(x).some(id => id in order));
+  const ses = Object.values(d.sessions).filter(x => x.classId === classId && x.key !== excludeKey && (!before || x.date < before) && chIds(x).some(id => id in order)).sort((a, b) => a.date.localeCompare(b.date));
   const out = {};
   for (const x of ses) for (const id of chIds(x)) if (id in order) out[id] = 'done';
   if (ses.length) {
     const ids = chIds(ses[ses.length - 1]).filter(id => id in order).sort((a, b) => order[a] - order[b]);
     out[ids[ids.length - 1]] = 'doing';
   }
-  if (!raw) for (const id of Object.keys(order)) {
+  if (!raw && !later) for (const id of Object.keys(order)) {
     const m = (d.progress || {})[classId + '|' + id];
     if (m === 'todo') delete out[id]; else if (m) out[id] = m;
   }
