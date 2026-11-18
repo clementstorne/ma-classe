@@ -349,7 +349,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 
 .print-area{display:none}
 @media print{
-  @page{size:A4 portrait;margin:10mm}
+  @page{size:A4 portrait;margin:0}
   html,body,#app,.app,.main,.main.fit{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important}
   .topbar,.page>*:not(.print-area){display:none!important}
   .main{padding:0!important}
@@ -368,3 +368,18 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 }
 @media print{.print-area .cps{display:none!important}}
 @media print{#app>p{display:none!important}}
+
+.cal .cbg{border-left:1px solid var(--line)}
+@media print{
+  .print-area{padding:10mm}
+  .print-page h2{font-size:12px;margin:0 0 4px}
+  .print-area .cal{grid-auto-rows:var(--rowpx,1px);grid-template-rows:22px}
+  .print-area .ch{font-size:11px}
+  .print-area .cn{font-size:9px}
+  .print-area .cw{font-size:8.5px;padding:0 6px;line-height:1}
+  .print-area .cw span{white-space:nowrap}
+  .print-area .cblock{margin:0.5px 2px;padding:0 5px;border-radius:4px;flex-direction:row;align-items:center;justify-content:flex-start;line-height:1.05;display:flex}
+  .print-area .cblock b{font-size:8.5px;font-weight:600}
+  .print-area .cblock.short,.print-area .cblock.tiny{display:flex}
+  .print-area .cvac{font-size:9px}
+}

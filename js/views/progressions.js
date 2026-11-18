@@ -14,6 +14,7 @@ export const levelOf = c => {
 const levelRank = l => { const i = LEVELS.indexOf(l); return i < 0 ? 99 : i; };
 const WEEK_OPTS = [0.5, 1, 1.5, 2, 2.5, 3];
 const fmtL = x => fromISO(x).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+const fmtN = x => fromISO(x).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 const fmtW = w => String(w).replace('.', ',');
 
 function levelsOf(d) {
@@ -182,7 +183,7 @@ function Calendar({ d, levels, from = 0, to = Infinity, print = false }) {
   }, [levels.join(',')]);
   const ab = d.etabs.find(e => e.ab && e.abRef);
   const gcol = i => i + 4;
-  const nw = Math.max(30, 14 + 9 * String(allWeeks.length).length), dw = print ? 112 : 140;
+  const nw = Math.max(30, 14 + 9 * String(allWeeks.length).length), dw = print ? 84 : 140;
   const vacSpan = w => { let n = 1; while (allWeeks[w.i + n]?.vac === w.vac && w.i + n <= last) n++; return n; };
   const base = from * R, top = (last + 1) * R - 1;
   return html`<div class="calwrap" ref=${wrap}><div class="cal" style=${{ gridTemplateColumns: `${nw}px ${dw}px ${ab ? 34 : 0}px repeat(${levels.length}, minmax(${print ? 120 : 170}px, 1fr))`, minWidth: print ? 0 : nw + dw + (ab ? 34 : 0) + 170 * levels.length + "px" }}>
@@ -191,7 +192,7 @@ function Calendar({ d, levels, from = 0, to = Infinity, print = false }) {
     ${weeks.map(w => {
       const r = R * (w.i - from) + 2, now = !print && w.i === nowWeek, L = ab ? weekLetter(ab, w.monday) : null;
       return html`<div key=${'n' + w.i} class=${'cn' + (now ? ' cal-now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 1 }}>${w.i + 1}</div>
-        <div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 2, left: nw + 'px' }}><span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span></div>
+        <div key=${'w' + w.i} class=${'cw' + (now ? ' cal-now' : '') + (w.vac ? ' vac' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 2, left: nw + 'px' }}>${print ? html`<span>${fmtN(w.start)} – ${fmtN(w.end)}</span>` : html`<span>du ${fmtL(w.start)}<br />au ${fmtL(w.end)}</span>`}</div>
         <div class=${'cab' + (now ? ' cal-now2' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: 3, left: nw + dw + 'px' }}>${w.vac ? '' : L || ''}</div>
         <div class=${'cbg' + (now ? ' now' : '')} style=${{ gridRow: `${r} / span ${R}`, gridColumn: `4 / ${levels.length + 4}` }}></div>
         ${w.vac && (allWeeks[w.i - 1]?.vac !== w.vac || w.i === from) ? html`<div class="cvac" style=${{ gridRow: `${r} / span ${R * vacSpan(w)}`, gridColumn: `4 / ${levels.length + 4}` }}>${w.vac}</div>` : null}`;
@@ -204,18 +205,18 @@ function Calendar({ d, levels, from = 0, to = Infinity, print = false }) {
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
       const n = b1 - b0 + 1, label = !b.cont || cutTop, chips = b.last !== false && !cutBot;
       return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (n < R ? ' short' : '') + (n < R / 2 ? ' tiny' : '') + ((b.cont && !cutTop) || cutTop ? ' ct' : '') + (b.cont && !cutTop ? ' cont' : '') + (b.last === false || cutBot ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b0 - base + 2} / ${b1 - base + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
-        ${label ? html`<small>Chapitre ${b.n}</small><b>${b.ch.title}</b>` : null}
+        ${label ? (print ? html`<b>${b.n}. ${b.ch.title}</b>` : html`<small>Chapitre ${b.n}</small><b>${b.ch.title}</b>`) : null}
         ${chips ? html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>` : null}</div>`;
     }))}
   </div></div>`;
 }
 
-/** Version imprimable : le calendrier découpé en pages de 15 semaines (A4 portrait). */
+/** Version imprimable : le calendrier découpé en une page de (A4 portrait, une seule page). */
 function PrintCalendars({ d, levels }) {
-  const n = calWeeks(d).length, per = 15, pages = [];
+  const n = calWeeks(d).length, per = n, pages = [];
   for (let f = 0; f < n; f += per) pages.push(f);
-  return html`<div class="print-area">${pages.map(f => html`<section class="print-page" key=${f}>
-    <h2>Progressions · semaines ${f + 1} à ${Math.min(n, f + per)}</h2><${Calendar} d=${d} levels=${levels} from=${f} to=${f + per - 1} print=${true} /></section>`)}</div>`;
+  return html`<div class="print-area">${pages.map(f => html`<section class="print-page" key=${f} style=${{ '--rowpx': Math.min(1.4, 975 / (n * R)) + 'px' }}>
+    <h2>Progressions</h2><${Calendar} d=${d} levels=${levels} from=${f} to=${f + per - 1} print=${true} /></section>`)}</div>`;
 }
 
 /* ---------- Liste des chapitres d'un niveau ---------- */
