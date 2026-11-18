@@ -75,7 +75,7 @@ export function ClassFolder({ id, tab, q }) {
     setAddStu(null);
   }
 
-  return html`<div class=${'page' + (tab === 'suivi' ? ' fitcol' : '')}>
+  return html`<div class=${'page' + (tab === 'suivi' || tab === 'notes' ? ' fitcol' : '')}>
     <div class="page-head"><span class="dot" style=${{ background: classColor(cls) }}></span><h1>${cls.name}</h1>
       <span class="sub">${studs.length} élèves · ${etabOf(d, cls).name}</span><span class="grow"></span>
       <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>${Ico('gear')} Paramètres</button></div>
