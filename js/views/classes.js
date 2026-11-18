@@ -26,7 +26,7 @@ export function ClassList() {
     <div class="page-head"><span class="grow"></span>
       <button class="btn primary" onClick=${() => setForm({ name: '', etabId: d.etabs[0].id, color: CLASS_COLORS[d.classes.length % CLASS_COLORS.length] })}>${Ico('plus')} Nouvelle classe</button></div>
     ${!d.classes.length ? html`<${Empty} title="Aucune classe">
-      <p>Crée une classe puis importe ses élèves (CSV / Excel / copier-coller).</p><//>` : null}
+      <//>` : null}
     <div class="etab-cols">${d.etabs.map(e => {
       const cs = sortedClasses(d).filter(c => c.etabId === e.id);
       if (!cs.length) return null;
@@ -145,7 +145,7 @@ function NotesList({ cls, studs, onImport }) {
   }
   return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>${Ico('plus')} Nouvelle évaluation</button>
     <button class="btn" onClick=${onImport}>${Ico('download')} Importer depuis Excel</button></div>
-    ${!evs.length ? html`<${Empty} title="Aucune évaluation"><p>Crée une évaluation et saisis le détail des points question par question.</p><//>`
+    ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
     : html`<div class="list">${evs.map(ev => {
         const avg = evalAverage(ev, studs.map(s => s.id), d.settings.comps, Object.fromEntries(studs.map(s => [s.id, s])));
         const per = (etab.periods || []).find(p => ev.date >= p.start && ev.date <= p.end);
@@ -174,7 +174,7 @@ function PlansList({ cls }) {
     mutate(dd => { delete dd.plans[x.k]; });
   }
   return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setAdd({ roomId: rooms[0] ? rooms[0].id : '', group: '' })}>${Ico('plus')} Ajouter un plan de classe</button></div>
-    ${!made.length ? html`<${Empty} title="Aucun plan de classe"><p>Ajoute un plan en choisissant l'une des salles de l'établissement.</p><//>`
+    ${!made.length ? html`<${Empty} title="Aucun plan de classe"><//>`
     : html`<div class="plan-cards">${made.map(x => {
         const r = roomById(d, x.roomId), p = d.plans[x.k];
         return html`<div class="card plan-card" key=${x.k} onClick=${() => go(`/plan/${cls.id}/${r.id}` + (x.group ? '?g=' + encodeURIComponent(x.group) : ''))}>
@@ -188,7 +188,7 @@ function PlansList({ cls }) {
       ${rooms.length ? html`<${Field} label=${'Salle de ' + etabOf(d, cls).name}><select value=${add.roomId} onChange=${e => setAdd({ ...add, roomId: e.target.value })}>${rooms.map(r => html`<option value=${r.id}>${r.name}</option>`)}</select><//>
         ${groups.length ? html`<${Field} label="Pour"><select value=${add.group} onChange=${e => setAdd({ ...add, group: e.target.value })}><option value="">La classe entière</option>${groups.map(g => html`<option value=${g}>Le groupe ${g}</option>`)}</select><//>` : null}
         ${exists ? html`<p class="muted">Ce plan existe déjà.</p>` : null}`
-        : html`<p class="muted">Aucune salle n'est rattachée à cet établissement. Ajoutes-en dans le menu Salles.</p>`}<//>` : null}`;
+        : html`<p class="muted">Aucune salle n'est rattachée à cet établissement.</p>`}<//>` : null}`;
 }
 
 /* ---------- Liste des élèves avec groupes ---------- */
@@ -208,9 +208,8 @@ function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos, initial }) {
     ${groups.length ? html`<div class="row" style="margin-bottom:10px"><div class="seg">
       <button class=${flt === '' ? 'on P' : ''} onClick=${() => setFlt('')}>Tous (${studs.length})</button>
       ${groups.map(g => html`<button class=${flt === g ? 'on P' : ''} onClick=${() => setFlt(g)}>${g} (${studs.filter(s => s.group === g).length})</button>`)}
-      <button class=${flt === '-' ? 'on P' : ''} onClick=${() => setFlt('-')}>Sans groupe (${studs.filter(s => !s.group).length})</button></div>
-      <span class="hint">Touche le badge d'un élève pour changer son groupe.</span></div>` : null}
-    ${!studs.length ? html`<${Empty} title="Aucun élève"><p>Importe un fichier CSV/Excel ou colle une liste.</p><//>`
+      <button class=${flt === '-' ? 'on P' : ''} onClick=${() => setFlt('-')}>Sans groupe (${studs.filter(s => !s.group).length})</button></div></div>` : null}
+    ${!studs.length ? html`<${Empty} title="Aucun élève"><//>`
     : html`<div class="appel-grid roster">${list.map(s => html`<div class="stu" key=${s.id} onClick=${() => onSheet(s.id)}>
       <${Avatar} s=${s} size=${44} /><div class="nm"><b>${s.nom}</b> ${s.prenom}${s.amenagement ? html`<div class="small" style="color:var(--warn)">★ ${s.amenagement}</div>` : null}</div>
       ${groups.length ? html`<button class=${'btn small' + (s.group ? ' on' : '')} style="min-width:56px" onClick=${e => { e.stopPropagation(); cycle(s); }} aria-label="Changer de groupe">${s.group || '—'}</button>` : null}
@@ -259,7 +258,6 @@ function GroupsModal({ cls, studs, onClose }) {
   }
   function clearAll() { mutate(dd => studs.forEach(s => { dd.students.find(x => x.id === s.id).group = ''; })); }
   return html`<${Modal} title=${'Groupes de la classe ' + cls.name} onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>OK</button>`}>
-    <p class="muted" style="margin:0">Pour les cours en demi-groupe (P1, P2…). Affecte ensuite chaque élève depuis la liste, puis choisis le groupe dans l'emploi du temps.</p>
     ${groups.map((g, i) => html`<div class="row" key=${g}><input class="inp" style="width:140px" defaultValue=${g} onBlur=${e => rename(i, e.target.value)} aria-label="Nom du groupe" />
       <span class="muted">${studs.filter(s => s.group === g).length} élève(s)</span><span class="grow"></span><button class="btn small danger" onClick=${() => remove(i)}>Supprimer</button></div>`)}
     <div class="row"><button class="btn" onClick=${add}>${Ico('plus')} Ajouter un groupe</button>

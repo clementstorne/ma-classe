@@ -98,7 +98,7 @@ export function NotesTab({ cls }) {
       <button class="btn primary" onClick=${() => setForm({ name: '', date: todayISO(), max: '20' })}>${Ico('plus')} Ajouter un devoir</button>
       <button class="btn" onClick=${() => setImp(true)}>${Ico('download')} Importer des notes</button></div>
     ${!studs.length ? html`<${Empty} title="Aucun élève" />`
-    : !cols.length ? html`<${Empty} title="Aucun devoir sur cette période"><p>Ajoute un devoir avec « Ajouter un devoir », ou crée une évaluation détaillée.</p><//>`
+    : !cols.length ? html`<${Empty} title="Aucun devoir sur cette période"><//>`
     : html`<div class="gridwrap"><table class="g notes" ref=${tbl} style=${{ width: (FIRST_W + (cols.length + 1) * COL_W) + 'px', '--cc': classColor(cls) }}>
       <colgroup><col style=${{ width: FIRST_W + 'px' }} /><col style=${{ width: COL_W + 'px' }} />${cols.map(() => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       <thead><tr><th class="stk">Élève</th><th class="moy" style="height:58px">Moyenne<br /><small>/20</small></th>${cols.map(c => html`<th key=${c.id} style="height:58px;cursor:pointer;line-height:1.25"
@@ -210,7 +210,6 @@ function PronoteImport({ cls, onClose, onDone }) {
   }
   return html`<${Modal} title="Importer des notes depuis Pronote" onClose=${onClose} wide
     foot=${data ? html`<span class="grow"></span><button class="btn primary" onClick=${doImport} disabled=${!Object.values(sel).some(Boolean)}>${Ico('download')} Importer</button>` : null}>
-    <p class="hint" style="margin:0">Dans Pronote, exporte les notes de la classe (CSV ou Excel), puis charge le fichier. La date, le barème (total des points) et le coefficient de chaque devoir sont repris, ainsi que les notes de chaque élève.</p>
     <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" onChange=${onFile} />
     ${err ? html`<p class="chip bad" style="white-space:normal">${err}</p>` : null}
     ${data ? html`
@@ -220,6 +219,5 @@ function PronoteImport({ cls, onClose, onDone }) {
       <p style="margin:0"><b>${data.studs.length - missing.length}</b> élève(s) sur ${data.studs.length} reconnu(s) dans la classe ${cls.name}.</p>
       ${missing.length ? html`<label class="row" style="gap:8px"><input type="checkbox" checked=${addMissing} onChange=${e => setAddMissing(e.target.checked)} />
         Ajouter les ${missing.length} élève(s) manquant(s) à la classe</label>
-        <p class="hint" style="margin:0">Non reconnus : ${missing.slice(0, 8).map(h => h.raw).join(', ')}${missing.length > 8 ? '…' : ''}</p>` : null}
-      <p class="hint" style="margin:0">Les colonnes sans aucune note sont décochées. Un devoir déjà noté à la même date (note ou évaluation) n'est jamais écrasé : il est ignoré.</p>` : null}<//>`;
+        <p class="hint" style="margin:0">Non reconnus : ${missing.slice(0, 8).map(h => h.raw).join(', ')}${missing.length > 8 ? '…' : ''}</p>` : null}` : null}<//>`;
 }

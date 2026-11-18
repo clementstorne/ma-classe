@@ -98,14 +98,12 @@ export function RosterImport({ classId, onClose }) {
     foot=${rows ? html`<button class="btn" onClick=${() => setRows(null)}>Retour</button><span class="grow"></span>
       <button class="btn primary" disabled=${!parsed.length} onClick=${doImport}>${Ico('download')} Importer ${parsed.length} élève(s)</button>` : null}>
     ${!rows ? html`
-      <p class="muted">Choisis un fichier CSV, XLS ou XLSX (export Pronote, tableur Google Drive…), ou colle directement des cellules copiées depuis un tableur.</p>
       <input type="file" accept=".csv,.xls,.xlsx,.txt,.tsv,.ods" onChange=${onFile} />
       <${Field} label="…ou colle ici (une ligne par élève)"><textarea class="inp" rows="6" value=${text} onInput=${e => setText(e.target.value)} placeholder="NOM Prénom"></textarea><//>
       <div><button class="btn" disabled=${!text.trim()} onClick=${onPaste}>Utiliser le texte collé</button></div>
       ${err ? html`<p style="color:var(--ko)">${err}</p>` : null}` : html`
       <label class="row"><input type="checkbox" checked=${hasHeader} onChange=${e => setHasHeader(e.target.checked)} /> La première ligne contient les titres de colonnes</label>
       <div class="row">${colSel('nom')}${colSel('prenom', true)}${colSel('amen', true)}${colSel('group', true)}</div>
-      <p class="hint">Si tu ne choisis pas de colonne « Prénom », les mots en MAJUSCULES sont pris pour le nom et le reste pour le prénom.</p>
       <div class="table-wrap" style="max-height:260px"><table class="t"><thead><tr><th>Nom</th><th>Prénom</th><th>Aménagement</th><th>Groupe</th></tr></thead>
         <tbody>${parsed.slice(0, 60).map(p => html`<tr><td>${p.nom}</td><td>${p.prenom}</td><td>${p.amenagement}</td><td>${p.group}</td></tr>`)}</tbody></table></div>`}
   <//>`;
@@ -134,10 +132,9 @@ export function PhotoBatch({ classId, onClose }) {
     setRes({ ok, ko });
   }
   return html`<${Modal} title="Importer les photos" onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>Fermer</button>`}>
-    <p class="muted">Sélectionne plusieurs photos nommées d'après les élèves (ex. <code>DUPONT Marie.jpg</code>, <code>dupont_marie.png</code>). Elles sont réduites et stockées dans l'application.</p>
     <input type="file" accept="image/*" multiple onChange=${onFiles} />
     ${res ? html`<p><b>${res.ok.length}</b> photo(s) associée(s).</p>
-      ${res.ko.length ? html`<p style="color:var(--ko)">Non reconnue(s) : ${res.ko.join(', ')}</p><p class="hint">Tu peux ajouter ces photos une par une depuis la fiche de l'élève.</p>` : null}` : null}
+      ${res.ko.length ? html`<p style="color:var(--ko)">Non reconnue(s) : ${res.ko.join(', ')}</p>` : null}` : null}
   <//>`;
 }
 
@@ -259,8 +256,7 @@ export function EvalImport({ classId, onClose, onDone }) {
   }
   return html`<${Modal} title="Importer des évaluations depuis Excel" onClose=${onClose} wide
     foot=${sheets ? html`<span class="grow"></span><button class="btn primary" onClick=${doImport} disabled=${!Object.values(sel).some(Boolean)}>${Ico('download')} Importer</button>` : null}>
-    ${!sheets ? html`<p class="muted">Ouvre un classeur au même format que le tien : une feuille par devoir, élèves en colonnes (« NOM⏎Prénom » en ligne 1), blocs « EXERCICE n », barème en colonne B, <code>x</code> pour une question non évaluée. Les compétences sont déduites des formules de la colonne B quand c'est possible.</p>
-      <input type="file" accept=".xlsx,.xls" onChange=${onFile} />${err ? html`<p style="color:var(--ko)">${err}</p>` : null}`
+    ${!sheets ? html`      <input type="file" accept=".xlsx,.xls" onChange=${onFile} />${err ? html`<p style="color:var(--ko)">${err}</p>` : null}`
     : html`${sheets.map(sh => {
         const nm = sh.studs.filter(h => match(h)).length;
         return html`<label class="card row"><input type="checkbox" checked=${!!sel[sh.name]} onChange=${e => setSel({ ...sel, [sh.name]: e.target.checked })} />

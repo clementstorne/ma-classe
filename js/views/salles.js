@@ -28,7 +28,7 @@ export function Salles() {
   const add = () => { const id = uid(); mutate(dd => dd.rooms.push({ id, name: 'Salle ' + (dd.rooms.length + 1), etabId: (dd.etabs[0] || {}).id || '', items: defaultRoomSeats() })); };
   return html`<div class="page">
     <div class="page-head"><span class="grow"></span><button class="btn primary" onClick=${add}>${Ico('plus')} Ajouter une salle</button></div>
-    ${!d.rooms.length ? html`<${Empty} title="Aucune salle"><p>Ajoute une salle, rattache-la à un établissement et dessine son modèle (tables, tableau, bureau).</p><//>`
+    ${!d.rooms.length ? html`<${Empty} title="Aucune salle"><//>`
     : d.etabs.concat(d.rooms.some(r => !r.etabId) ? [{ id: '', name: 'Tous les établissements' }] : []).map(e => {
         const rs = d.rooms.filter(r => (r.etabId || '') === e.id);
         if (!rs.length) return null;
@@ -68,7 +68,7 @@ export function RoomEditor({ id }) {
       <button class="btn small" onClick=${addSeat}>${Ico('plus')} Table</button><button class="btn small" onClick=${() => setGen(true)}>${Ico('layout')} Générer une grille</button>
       <button class="btn small" onClick=${addLabel}>${Ico('plus')} Repère (tableau, bureau…)</button><span class="grow"></span>
       ${selItem ? html`${selItem.kind === 'label' ? html`<button class="btn small" onClick=${editLabel}>Renommer</button>` : null}
-        <button class="btn small" onClick=${dupSel}>Dupliquer</button><button class="btn small danger" onClick=${delSel}>Supprimer</button>` : html`<span class="hint">Glisse les éléments pour les placer ; touche-en un pour le sélectionner.</span>`}
+        <button class="btn small" onClick=${dupSel}>Dupliquer</button><button class="btn small danger" onClick=${delSel}>Supprimer</button>` : null}
       <button class="btn small danger" onClick=${clearRoom}>Tout effacer</button></div>
     <${PlanCanvas} room=${room} seatMap=${{}} byId=${{}} mode="template" selected=${selSeat} onSeatTap=${it => setSelSeat(it.id === selSeat ? null : it.id)} onItemChange=${itemChange} />
     ${gen ? html`<${GridGen} onClose=${() => setGen(false)} onGen=${items => { edit(r => { r.items.push(...items); }); setGen(false); }} />` : null}
@@ -91,8 +91,7 @@ function GridGen({ onClose, onGen }) {
   const num = (v, set, max) => html`<input type="number" min="1" max=${max} value=${v} onInput=${e => set(Math.max(1, Math.min(max, Number(e.target.value) || 1)))} />`;
   return html`<${Modal} title="Générer une grille de tables" onClose=${onClose} foot=${html`<button class="btn" onClick=${onClose}>Annuler</button><button class="btn primary" onClick=${gen}>Ajouter ${rows * cols} tables</button>`}>
     <div class="row"><${Field} label="Rangées">${num(rows, setRows, 8)}<//><${Field} label="Colonnes">${num(cols, setCols, 10)}<//>
-    <${Field} label="Tables par îlot (écart entre les îlots)">${num(group, setGroup, 10)}<//></div>
-    <p class="hint">Les tables sont ajoutées au modèle actuel ; utilise « Tout effacer » avant pour repartir de zéro.</p><//>`;
+    <${Field} label="Tables par îlot (écart entre les îlots)">${num(group, setGroup, 10)}<//></div><//>`;
 }
 
 function RoomBg({ room }) {

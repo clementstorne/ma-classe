@@ -139,7 +139,6 @@ export function Schedule() {
   const abLabel = sameLetter ? `Semaine ${letters[0]}` : letters.length ? abEtabs.map((e, i) => `${e.name} : semaine ${letters[i]}`).join(' · ') : '';
 
   if (!d.classes.length) return html`<div class="page"><${Empty} title="Bienvenue dans Ma classe">
-    <p>Commence par créer ou importer tes classes, puis place tes créneaux dans l'emploi du temps.</p>
     <div class="row" style="justify-content:center"><a class="btn primary" href="#/classes">Aller aux classes</a>
     <a class="btn" href="#/settings">Paramètres (sauvegarde, exemple)</a></div><//></div>`;
 
@@ -157,8 +156,6 @@ export function Schedule() {
       <button class="btn" onClick=${() => setWs(mondayOf(new Date()))}>Aujourd'hui</button>
       <button class="btn" onClick=${() => setWs(addDays(ws, 7))} aria-label="Semaine suivante">›</button>
     </div>
-    ${edit ? html`<p class="hint">Mode édition : touche une zone vide pour ajouter un créneau, ou une séance pour la modifier, l'annuler ou la déplacer <b>uniquement cette semaine</b> (ou pour toutes les semaines).</p>` : null}
-    ${!d.slots.length && !edit ? html`<p class="banner">Ton emploi du temps est vide. Touche <b>✎ Modifier</b> puis une zone de la grille pour ajouter un créneau (classe, salle, horaires).</p>` : null}
     <div class="weekbox" ref=${boxRef}><div class=${'week' + (edit ? ' edit' : '')} style=${{ '--nd': nd }}>
       <div class="dh"></div>
       ${dates.map((date, i) => { const hol = holidayOn(d, date); return html`<div class=${'dh' + (date === today ? ' today' : '')}>${DAYS[i]}<small>${fromISO(date).getDate()}/${fromISO(date).getMonth() + 1}</small>${hol ? html`<small class="hol">${hol.name}</small>` : null}</div>`; })}

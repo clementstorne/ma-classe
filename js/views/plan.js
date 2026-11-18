@@ -153,8 +153,6 @@ export function PlanPage({ classId, roomId, group }) {
     edit(p => { p.seatMap = {}; order.forEach((sid, i) => { if (seats[i]) p.seatMap[seats[i].id] = sid; }); });
     setSelSeat(null); setSelStu(null);
   }
-  const hint = selStu ? 'Touche maintenant un siège pour y placer l\'élève.' : selSeat ? 'Touche un autre siège pour intervertir les deux élèves.' : '';
-
   return html`<div class="page" style="max-width:1400px">
     <div class="page-head">
       <a class="btn" href=${'#/class/' + classId + '/plans'}>‹ ${cls.name}</a>
@@ -164,7 +162,7 @@ export function PlanPage({ classId, roomId, group }) {
       <button class="btn" onClick=${reset}>${Ico('reset')} Réinitialiser</button>
       <button class="btn" onClick=${exportImage}>${Ico('upload')} Exporter</button>
     </div>
-    ${hint ? html`<div class="row" style="margin-bottom:8px"><span class="hint">${hint}</span>${selSeat && plan.seatMap[selSeat] ? html`<button class="btn small" onClick=${() => { edit(p => unplace(p, plan.seatMap[selSeat])); setSelSeat(null); }}>Retirer du plan</button>` : null}</div>` : null}
+    ${selSeat && plan.seatMap[selSeat] ? html`<div class=\"row\" style=\"margin-bottom:8px\">${selSeat && plan.seatMap[selSeat] ? html`<button class="btn small" onClick=${() => { edit(p => unplace(p, plan.seatMap[selSeat])); setSelSeat(null); }}>Retirer du plan</button>` : null}</div>` : null}
     <div class="plan-layout">
       ${bench.length ? html`<div class="bench" data-drop="bench"><h3>À placer (${bench.length})</h3>
         ${bench.map(s => html`<div class=${'chipst' + (selStu === s.id ? ' sel' : '')} key=${s.id} onPointerDown=${e => benchDown(e, s)}><${Avatar} s=${s} size=${34} /><span><b>${s.nom}</b> ${s.prenom}</span></div>`)}

@@ -57,11 +57,10 @@ export function Appel({ classId, date, slotId }) {
     <div class="row" style="margin-bottom:12px"><div class="counters"><span class="counter p">${studs.length - nA - nR} présent${studs.length - nA - nR > 1 ? 's' : ''}</span><span class="counter a">${nA} absent${nA > 1 ? 's' : ''}</span><span class="counter r">${nR} retard${nR > 1 ? 's' : ''}</span>
       <span class="counter">📝 ${ev('devoir').length}</span><span class="counter">🎒 ${ev('materiel').length}</span></div><span class="grow"></span>
       ${se && se.validated ? html`<span class="chip" style="background:var(--ok-soft);color:var(--ok)">✓ Appel enregistré</span>` : html`<button class="btn primary" onClick=${validate}>✓ Tous présents / valider</button>`}</div>
-    ${!studs.length ? html`<${Empty} title=${slot && slot.group ? 'Aucun élève dans le groupe ' + slot.group : 'Aucun élève dans cette classe'}><p>Affecte les élèves à un groupe depuis le dossier de la classe (onglet Élèves).</p><//>` : null}
+    ${!studs.length ? html`<${Empty} title=${slot && slot.group ? 'Aucun élève dans le groupe ' + slot.group : 'Aucun élève dans cette classe'}><//>` : null}
     ${view === 'list' ? html`<div class="appel-grid">${studs.map(s => html`<div class=${'stu ' + statusOf(s.id)} key=${s.id}>
         <${Avatar} s=${s} size=${48} /><div class="who" onClick=${() => setFiche(s.id)}><b>${s.nom}</b><span>${s.prenom}${s.amenagement ? html` <span style="color:var(--warn)">★</span>` : ''}</span></div>${controls(s)}</div>`)}</div>`
-      : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${roomsFor(d, cls).map(r => html`<option value=${r.id}>${r.name}</option>`)}</select>
-          <span class="hint">Touche un élève pour ouvrir ses actions.</span></div>
+      : html`<div class="row" style="margin-bottom:8px"><select class="inp" style="width:auto" value=${roomId} onChange=${e => setRoomId(e.target.value)}>${roomsFor(d, cls).map(r => html`<option value=${r.id}>${r.name}</option>`)}</select></div>
         ${room ? html`<${PlanCanvas} room=${room} seatMap=${plan.seatMap} byId=${byId} labels=${seatLabels(studentsOf(d, classId))} mode="view" onSeatTap=${it => { const sid = plan.seatMap[it.id]; if (sid) setPop(sid); }}
           seatClass=${s => statusOf(s.id) === 'P' ? '' : statusOf(s.id)}
           seatExtra=${s => html`<span class="badge">${has(s.id, 'devoir') ? '📝' : ''}${has(s.id, 'materiel') ? '🎒' : ''}</span>`} />` : null}

@@ -137,7 +137,6 @@ export function Eval({ id, q }) {
       <button class="btn small" onClick=${() => setBilan(true)}>Bilan des compétences</button>
       <button class="btn small" onClick=${() => setStruct(true)}>✎ Barème et compétences</button>
       <button class="btn small" onClick=${() => setMeta(true)}>⚙</button></div>
-    <p class="hint">Touche une case, puis une valeur rapide ou saisis les points (<b>x</b> = question non évaluée, exclue du barème ; <b>–</b> = non traité). Les cases vides sont en jaune. La colonne ± permet un bonus ou un malus sur la note (ex. −1).</p>
     <div class="gridwrap"><table class="g" style=${{ width: (FIRST_W + (transposed ? studs.length + 1 : items.length) * COL_W) + 'px' }}>
       <colgroup><col style=${{ width: FIRST_W + 'px' }} />${Array.from({ length: transposed ? studs.length + 1 : items.length }, () => html`<col style=${{ width: COL_W + 'px' }} />`)}</colgroup>
       ${!transposed ? html`
@@ -199,7 +198,6 @@ function Structure({ ev, onClose }) {
     onClose();
   }
   return html`<${Modal} title="Barème et compétences" wide onClose=${onClose} foot=${html`<button class="btn" onClick=${onClose}>Annuler</button><button class="btn primary" onClick=${save}>Enregistrer</button>`}>
-    <p class="hint">Chaque question a un libellé (1, 2a…), un barème et, si besoin, des compétences. Le niveau de compétence (1 à 4) se calcule comme dans ton Excel : part des points obtenus sur les questions rattachées, les questions « x » étant exclues.</p>
     ${ex.map((e, ei) => html`<div class="exbox" key=${e.id}>
       <div class="row"><input class="inp" style="flex:1;font-weight:700" value=${e.title} onInput=${v => upd(ei, x => { x.title = v.target.value; })} />
         <button class="btn small danger" onClick=${() => { if (confirm('Supprimer cet exercice ?')) setEx(ex.filter((_, i) => i !== ei)); }}>Supprimer l'exercice</button></div>

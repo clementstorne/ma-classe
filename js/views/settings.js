@@ -40,16 +40,14 @@ export function Settings({ tab: t }) {
     ${tab === 'sauvegardes' && html`<div>
 
     <div class="card col">
-      <p style="margin:0">Les données sont enregistrées <b>sur cet appareil</b> (iPad ou ordinateur). Pour les mettre à l'abri et les retrouver sur l'autre appareil, exporte un fichier de sauvegarde et range-le dans Google Drive.</p>
       <p style="margin:0" class=${stale ? '' : 'muted'}>${stale ? '⚠ ' : ''}Dernière sauvegarde : <b>${lastB}</b> · taille ≈ ${bytes} Ko</p>
       <div class="row"><button class="btn primary" disabled=${busy} onClick=${exportBackup}>${Ico('upload')} Exporter une sauvegarde</button>
         <button class="btn" onClick=${() => file.current.click()}>${Ico('download')} Restaurer depuis un fichier</button><input ref=${file} type="file" accept=".json,application/json" hidden onChange=${onRestore} /></div>
-      <p class="hint" style="margin:0"><b>iPad :</b> « Exporter » ouvre la feuille de partage → <i>Enregistrer dans Fichiers</i> → Google Drive. <b>Restaurer</b> ouvre le sélecteur de fichiers, où Drive apparaît aussi. <b>Mac :</b> le fichier part dans Téléchargements ; glisse-le dans Drive.</p>
     </div>
 
 </div>`}
     ${tab === 'vacances' && html`<div>
-<p class="hint" style="margin:0 0 8px">Ces dates sont communes à tous les établissements : les cours qui tombent ces jours-là n'apparaissent pas dans l'emploi du temps.</p>
+
     <${Holidays} />
 
 </div>`}
@@ -71,7 +69,7 @@ export function Settings({ tab: t }) {
       <button class="btn danger" onClick=${async () => { if (confirm('Effacer TOUTES les données de cet appareil ?') && confirm('Vraiment tout effacer ? Pense à exporter une sauvegarde avant.')) { await resetAll(); toast('Données effacées'); } }}>Tout effacer</button>
     </div>
 </div>`}
-    <p class="hint" style="margin-top:14px">Ma classe · version 0.1 (prototype). Fonctionne hors connexion une fois installée.</p>
+    <p class="hint" style="margin-top:14px">Ma classe · version 0.1</p>
   </div>`;
 }
 
@@ -149,7 +147,6 @@ function Holidays() {
   return html`<div>
     <h3 style="margin:0 0 8px">Vacances scolaires</h3>
     <div class="card col">
-      <p class="hint" style="margin:0">Les cours récurrents n'apparaissent pas dans l'emploi du temps pendant ces dates (les séances ponctuelles restent affichées).</p>
       <div class="row" style="align-items:flex-end">
         <${Field} label="Nom"><input value=${f.name} placeholder="ex. Vacances de Noël" onInput=${e => setF({ ...f, name: e.target.value })} /><//>
         <${Field} label="Du"><input type="date" value=${f.start} onInput=${e => setF({ ...f, start: e.target.value })} /><//>
