@@ -4,6 +4,7 @@ import { Modal, Field, toast } from './common.js';
 import { uid, resizeImage, imageSize, shareOrDownload, todayISO, addDays, iso, mondayOf, fmtDateFull } from '../util.js';
 import { go } from '../router.js';
 import { Etabs } from './etabs.js';
+import { Ico } from '../icons.js';
 
 const TABS = [['sauvegardes', 'Sauvegardes'], ['vacances', 'Vacances et jours fériés'], ['etablissements', 'Établissements et salles'], ['competences', 'Compétences'], ['donnees', 'Données']];
 
@@ -33,7 +34,7 @@ export function Settings({ tab: t }) {
   const stale = !d.lastBackup || Date.now() - d.lastBackup > 14 * 864e5;
 
   return html`<div class="page" style="max-width:860px">
-    <div class="page-head"><h1>⚙ Réglages</h1></div>
+    <div class="page-head"><h1 class="h-ico">${Ico('gear', 22)} Paramètres</h1></div>
 
     <div class="tabs">${TABS.map(([k, l]) => html`<a class=${tab === k ? 'on' : ''} href=${'#/settings/' + k}>${l}</a>`)}</div>
     ${tab === 'sauvegardes' && html`<div>
@@ -41,8 +42,8 @@ export function Settings({ tab: t }) {
     <div class="card col">
       <p style="margin:0">Les données sont enregistrées <b>sur cet appareil</b> (iPad ou ordinateur). Pour les mettre à l'abri et les retrouver sur l'autre appareil, exporte un fichier de sauvegarde et range-le dans Google Drive.</p>
       <p style="margin:0" class=${stale ? '' : 'muted'}>${stale ? '⚠ ' : ''}Dernière sauvegarde : <b>${lastB}</b> · taille ≈ ${bytes} Ko</p>
-      <div class="row"><button class="btn primary" disabled=${busy} onClick=${exportBackup}>⬆ Exporter une sauvegarde</button>
-        <button class="btn" onClick=${() => file.current.click()}>⬇ Restaurer depuis un fichier</button><input ref=${file} type="file" accept=".json,application/json" hidden onChange=${onRestore} /></div>
+      <div class="row"><button class="btn primary" disabled=${busy} onClick=${exportBackup}>${Ico('upload')} Exporter une sauvegarde</button>
+        <button class="btn" onClick=${() => file.current.click()}>${Ico('download')} Restaurer depuis un fichier</button><input ref=${file} type="file" accept=".json,application/json" hidden onChange=${onRestore} /></div>
       <p class="hint" style="margin:0"><b>iPad :</b> « Exporter » ouvre la feuille de partage → <i>Enregistrer dans Fichiers</i> → Google Drive. <b>Restaurer</b> ouvre le sélecteur de fichiers, où Drive apparaît aussi. <b>Mac :</b> le fichier part dans Téléchargements ; glisse-le dans Drive.</p>
     </div>
 

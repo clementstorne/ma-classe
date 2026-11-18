@@ -7,6 +7,7 @@ import { RosterImport, PhotoBatch, EvalImport } from './importer.js';
 import { uid, CLASS_COLORS, classColor, fmtDateLong, fmtDateShort, todayISO, displayName, download, fmtNum } from '../util.js';
 import { suiviStats, evalAverage } from '../logic.js';
 import { go } from '../router.js';
+import { Ico } from '../icons.js';
 
 export function ClassList() {
   const d = useStore();
@@ -21,7 +22,7 @@ export function ClassList() {
   }
   return html`<div class="page">
     <div class="page-head"><span class="grow"></span>
-      <button class="btn primary" onClick=${() => setForm({ name: '', etabId: d.etabs[0].id, color: CLASS_COLORS[d.classes.length % CLASS_COLORS.length] })}>＋ Nouvelle classe</button></div>
+      <button class="btn primary" onClick=${() => setForm({ name: '', etabId: d.etabs[0].id, color: CLASS_COLORS[d.classes.length % CLASS_COLORS.length] })}>${Ico('plus')} Nouvelle classe</button></div>
     ${!d.classes.length ? html`<${Empty} title="Aucune classe">
       <p>Crée une classe puis importe ses élèves (CSV / Excel / copier-coller).</p><//>` : null}
     <div class="etab-cols">${d.etabs.map(e => {
@@ -50,7 +51,7 @@ export function ClassFolder({ id, tab, q }) {
   if (!cls) return html`<${Empty} title="Classe introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
   const studs = studentsOf(d, id);
   const slot = q.slot && q.date ? occurrence(d, q.slot, q.date) : null;
-  const T = (k, label) => html`<a class=${tab === k ? 'on' : ''} href=${'#/class/' + id + '/' + k + (q.date ? `?date=${q.date}&slot=${q.slot || ''}` : '')}>${label}</a>`;
+  const T = (k, ic, label) => html`<a class=${tab === k ? 'on' : ''} href=${'#/class/' + id + '/' + k + (q.date ? `?date=${q.date}&slot=${q.slot || ''}` : '')}>${Ico(ic)} ${label}</a>`;
   const room = slot && roomById(d, slot.roomId);
   const apLink = (date, slotId) => `/appel/${id}/${date}/${slotId || 'x'}`;
   const se = q.date && d.sessions[sessionKey(id, q.date, q.slot)];
@@ -73,15 +74,15 @@ export function ClassFolder({ id, tab, q }) {
   }
 
   return html`<div class="page">
-    <div class="page-head"><a class="btn ghost" href="#/classes">‹ Classes</a><span class="dot" style=${{ background: classColor(cls) }}></span><h1>${cls.name}</h1>
+    <div class="page-head"><span class="dot" style=${{ background: classColor(cls) }}></span><h1>${cls.name}</h1>
       <span class="sub">${studs.length} élèves · ${etabOf(d, cls).name}</span><span class="grow"></span>
-      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>⚙ Classe</button></div>
+      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls) })}>${Ico('gear')} Paramètres</button></div>
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
         <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${slot && slot.group ? ' · groupe ' + slot.group : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
       ${room ? html`<a class="btn" href=${'#/plan/' + id + '/' + room.id}>Plan de classe</a>` : null}</div>`
-      : html`<div class="row" style="margin-bottom:12px"><button class="btn" onClick=${() => go(apLink(todayISO(), null))}>Faire l'appel aujourd'hui (hors créneau)</button></div>`}
-    <div class="tabs">${T('eleves', 'Élèves')}${T('suivi', 'Suivi')}${T('notes', 'Notes')}${T('evaluations', 'Évaluations')}${T('plans', 'Plans de classe')}</div>
+      : null}
+    <div class="tabs">${T('eleves', 'users', 'Élèves')}${T('suivi', 'chart', 'Suivi')}${T('notes', 'pen', 'Notes')}${T('evaluations', 'clip', 'Évaluations')}${T('plans', 'layout', 'Plans de classe')}</div>
     ${tab === 'suivi' ? html`<${Suivi} key=${slot && slot.group || ''} initial=${slot && slot.group || ''} cls=${cls} studs=${studs} onOpen=${setSheet} />`
       : tab === 'notes' ? html`<${NotesTab} cls=${cls} />`
       : tab === 'evaluations' ? html`<${NotesList} cls=${cls} studs=${studs} onImport=${() => setEvImp(true)} />`
@@ -125,7 +126,7 @@ function Suivi({ cls, studs, onOpen, initial }) {
   }
   return html`<div class="row" style="margin-bottom:10px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} />
       ${groups.length ? html`<select class="inp" style="width:auto" value=${grp} onChange=${e => setGrp(e.target.value)}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>${g}</option>`)}</select>` : null}
-      <span class="hint">Seuil d'alerte : ${th} (travail non fait et oublis de matériel · modifiable dans les réglages)</span><span class="grow"></span><button class="btn small" onClick=${csv}>⬇ CSV</button></div>
+      <span class="hint">Seuil d'alerte : ${th} (travail non fait et oublis de matériel · modifiable dans les paramètres)</span><span class="grow"></span><button class="btn small" onClick=${csv}>${Ico('download')} CSV</button></div>
     <div class="table-wrap"><table class="t"><thead><tr><th onClick=${() => setSort('nom')}>Élève</th>
       <th onClick=${() => setSort('dev')}>📝 Travail non fait</th><th onClick=${() => setSort('mat')}>🎒 Oublis matériel</th>
       <th onClick=${() => setSort('abs')}>🚫 Absences</th><th onClick=${() => setSort('ret')}>⏰ Retards</th></tr></thead>
@@ -144,8 +145,8 @@ function NotesList({ cls, studs, onImport }) {
     mutate(dd => dd.evals.push(ev));
     go(`/eval/${ev.id}?edit=1`);
   }
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>＋ Nouvelle évaluation</button>
-    <button class="btn" onClick=${onImport}>⬆ Importer depuis Excel</button></div>
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>${Ico('plus')} Nouvelle évaluation</button>
+    <button class="btn" onClick=${onImport}>${Ico('upload')} Importer depuis Excel</button></div>
     ${!evs.length ? html`<${Empty} title="Aucune évaluation"><p>Crée une évaluation et saisis le détail des points question par question.</p><//>`
     : html`<div class="list">${evs.map(ev => {
         const avg = evalAverage(ev, studs.map(s => s.id), d.settings.comps, Object.fromEntries(studs.map(s => [s.id, s])));
@@ -164,7 +165,7 @@ function PlansList({ cls }) {
     const n = Object.values(p.seatMap).filter(sid => d.students.some(s => s.id === sid)).length;
     return html`<div class="item" key=${r.id} onClick=${() => go(`/plan/${cls.id}/${r.id}`)}><div class="grow"><b>${r.name}</b>
       <div class="muted small">${r.items.filter(i => i.kind === 'seat').length} places · ${n} élève(s) placé(s)</div></div><span class="muted">›</span></div>`;
-  })}</div><p class="hint">Seules les salles de l'établissement de la classe sont listées. Elles se gèrent dans les réglages.</p>`;
+  })}</div><p class="hint">Seules les salles de l'établissement de la classe sont listées. Elles se gèrent dans les paramètres.</p>`;
 }
 
 /* ---------- Liste des élèves avec groupes ---------- */
@@ -178,9 +179,9 @@ function Roster({ cls, studs, onSheet, onImport, onAdd, onPhotos, initial }) {
     const next = order[(order.indexOf(s.group || '') + 1) % order.length];
     mutate(dd => { dd.students.find(x => x.id === s.id).group = next; });
   };
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${onImport}>⬆ Importer une liste</button>
-      <button class="btn" onClick=${onAdd}>＋ Ajouter un élève</button><button class="btn" onClick=${onPhotos}>📷 Photos en lot</button>
-      <button class="btn" onClick=${() => setGm(true)}>👥 Groupes${groups.length ? ' (' + groups.join(', ') + ')' : ''}</button></div>
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${onImport}>${Ico('upload')} Importer une liste</button>
+      <button class="btn" onClick=${onAdd}>${Ico('plus')} Ajouter un élève</button><button class="btn" onClick=${onPhotos}>${Ico('camera')} Photos en lot</button>
+      <button class="btn" onClick=${() => setGm(true)}>${Ico('users')} Groupes${groups.length ? ' (' + groups.join(', ') + ')' : ''}</button></div>
     ${groups.length ? html`<div class="row" style="margin-bottom:10px"><div class="seg">
       <button class=${flt === '' ? 'on P' : ''} onClick=${() => setFlt('')}>Tous (${studs.length})</button>
       ${groups.map(g => html`<button class=${flt === g ? 'on P' : ''} onClick=${() => setFlt(g)}>${g} (${studs.filter(s => s.group === g).length})</button>`)}
@@ -238,7 +239,7 @@ function GroupsModal({ cls, studs, onClose }) {
     <p class="muted" style="margin:0">Pour les cours en demi-groupe (P1, P2…). Affecte ensuite chaque élève depuis la liste, puis choisis le groupe dans l'emploi du temps.</p>
     ${groups.map((g, i) => html`<div class="row" key=${g}><input class="inp" style="width:140px" defaultValue=${g} onBlur=${e => rename(i, e.target.value)} aria-label="Nom du groupe" />
       <span class="muted">${studs.filter(s => s.group === g).length} élève(s)</span><span class="grow"></span><button class="btn small danger" onClick=${() => remove(i)}>Supprimer</button></div>`)}
-    <div class="row"><button class="btn" onClick=${add}>＋ Ajouter un groupe</button>
+    <div class="row"><button class="btn" onClick=${add}>${Ico('plus')} Ajouter un groupe</button>
       <button class="btn" onClick=${split} disabled=${groups.length < 2}>⚖ Répartir par ordre alphabétique</button>
       <button class="btn ghost" onClick=${clearAll} disabled=${!groups.length}>Retirer tout le monde des groupes</button></div><//>`;
 }

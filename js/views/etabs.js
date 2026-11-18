@@ -49,7 +49,7 @@ export function Etabs({ embedded } = {}) {
 
   return html`<div class=${embedded ? '' : 'page'} style=${embedded ? '' : 'max-width:860px'}>
     ${embedded ? html`<div class="row" style="margin-bottom:8px"><span class="grow"></span><button class="btn" onClick=${addEtab}>＋ Ajouter un établissement</button></div>` : html`<div class="page-head"><h1>Établissements</h1><span class="grow"></span><button class="btn" onClick=${addEtab}>＋ Ajouter un établissement</button></div>`}
-    <p class="hint">Chaque classe est rattachée à un établissement : le suivi (oublis, travaux non faits, absences), les notes et les semaines A/B s'appuient sur ces réglages.</p>
+    <p class="hint">Chaque classe est rattachée à un établissement : le suivi (oublis, travaux non faits, absences), les notes et les semaines A/B s'appuient sur ces paramètres.</p>
     ${d.etabs.map(e => {
       const warn = issues(e), nCl = d.classes.filter(c => c.etabId === e.id).length;
       return html`<div class="card col" style="margin-bottom:14px" key=${e.id}>

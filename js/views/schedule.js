@@ -141,7 +141,7 @@ export function Schedule() {
   if (!d.classes.length) return html`<div class="page"><${Empty} title="Bienvenue dans Ma classe">
     <p>Commence par créer ou importer tes classes, puis place tes créneaux dans l'emploi du temps.</p>
     <div class="row" style="justify-content:center"><a class="btn primary" href="#/classes">Aller aux classes</a>
-    <a class="btn" href="#/settings">Réglages (sauvegarde, exemple)</a></div><//></div>`;
+    <a class="btn" href="#/settings">Paramètres (sauvegarde, exemple)</a></div><//></div>`;
 
   const f = form;
   const recurringEdit = f && f.kind === 'recurring' && f.mode === 'edit';
