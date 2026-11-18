@@ -1,10 +1,10 @@
-import { html, useState } from '../../vendor/preact-htm.js';
+import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
 import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf, sortedClasses, holidayOn, roomsFor } from '../store.js';
 import { mondayOf, addDays, iso, fromISO, toMin, fromMin, DAYS, uid, classColor, textOn, todayISO, fmtDateLong } from '../util.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { go } from '../router.js';
 
-const PPM = 1.05; // pixels par minute
+const PPM_MAX = 1.6; // pixels par minute (plafond) ; la grille s'adapte à la hauteur disponible
 const dayIdx = date => (fromISO(date).getDay() + 6) % 7;
 
 export function Schedule() {
@@ -13,6 +13,14 @@ export function Schedule() {
   const setWs = w => { setWsState(w); try { sessionStorage.setItem('edtWeek', iso(w)); } catch { /* */ } };
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(null);
+  const boxRef = useRef();
+  const [boxH, setBoxH] = useState(0);
+  useEffect(() => {
+    const el = boxRef.current; if (!el) return;
+    const ro = new ResizeObserver(() => setBoxH(el.clientHeight));
+    ro.observe(el); setBoxH(el.clientHeight);
+    return () => ro.disconnect();
+  });
 
   const abEtabs = d.etabs.filter(e => e.ab && e.abRef);
   const letterOfClass = cid => weekLetter(etabOf(d, classById(d, cid)), ws);
@@ -38,6 +46,7 @@ export function Schedule() {
   const mins = dates.flatMap(dt => byDate[dt].flatMap(o => [toMin(o.start), toMin(o.end)]));
   const gStart = Math.floor(Math.min(8 * 60, ...mins) / 60) * 60;
   const gEnd = Math.ceil(Math.max(17 * 60, ...mins) / 60) * 60;
+  const PPM = boxH ? Math.min(PPM_MAX, Math.max(0.45, (boxH - 62) / (gEnd - gStart))) : 1.05;
   const height = (gEnd - gStart) * PPM;
   const today = todayISO();
   const hours = [];
@@ -124,7 +133,10 @@ export function Schedule() {
   }
 
   const wEnd = addDays(ws, nd - 1);
-  const label = `${ws.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} – ${wEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+  const label = `Semaine du ${ws.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${wEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+  const letters = abEtabs.map(e => weekLetter(e, ws));
+  const sameLetter = letters.length > 0 && letters.every(l => l === letters[0]);
+  const abLabel = sameLetter ? ` – Semaine ${letters[0]}` : letters.length ? ' – ' + abEtabs.map((e, i) => `${e.name} : semaine ${letters[i]}`).join(' · ') : '';
 
   if (!d.classes.length) return html`<div class="page"><${Empty} title="Bienvenue dans Ma classe">
     <p>Commence par créer ou importer tes classes, puis place tes créneaux dans l'emploi du temps.</p>
@@ -135,10 +147,9 @@ export function Schedule() {
   const recurringEdit = f && f.kind === 'recurring' && f.mode === 'edit';
   const showWeekDay = f && f.kind === 'recurring' && (f.mode === 'new' || f.scope === 'all');
 
-  return html`<div class="page">
+  return html`<div class="page sched">
     <div class="page-head">
-      <h1>Emploi du temps</h1><span class="sub">${label}</span>
-      ${abEtabs.map(e => html`<span class="chip" title=${e.name}>${e.name} : semaine ${weekLetter(e, ws)}</span>`)}<span class="grow"></span>
+      <span class="sub wkl">${label}${abLabel}</span><span class="grow"></span>
       <button class="btn" onClick=${() => setWs(addDays(ws, -7))} aria-label="Semaine précédente">‹</button>
       <button class="btn" onClick=${() => setWs(mondayOf(new Date()))}>Aujourd'hui</button>
       <button class="btn" onClick=${() => setWs(addDays(ws, 7))} aria-label="Semaine suivante">›</button>
@@ -147,7 +158,7 @@ export function Schedule() {
     </div>
     ${edit ? html`<p class="hint">Mode édition : touche une zone vide pour ajouter un créneau, ou une séance pour la modifier, l'annuler ou la déplacer <b>uniquement cette semaine</b> (ou pour toutes les semaines).</p>` : null}
     ${!d.slots.length && !edit ? html`<p class="banner">Ton emploi du temps est vide. Touche <b>✎ Modifier</b> puis une zone de la grille pour ajouter un créneau (classe, salle, horaires).</p>` : null}
-    <div class=${'week' + (edit ? ' edit' : '')} style=${{ '--nd': nd }}>
+    <div class="weekbox" ref=${boxRef}><div class=${'week' + (edit ? ' edit' : '')} style=${{ '--nd': nd }}>
       <div class="dh"></div>
       ${dates.map((date, i) => { const hol = holidayOn(d, date); return html`<div class=${'dh' + (date === today ? ' today' : '')}>${DAYS[i]}<small>${fromISO(date).getDate()}/${fromISO(date).getMonth() + 1}</small>${hol ? html`<small class="hol">${hol.name}</small>` : null}</div>`; })}
       <div class="gut" style=${{ height: height + 'px' }}>${hours.map(m => html`<span style=${{ top: (m - gStart) * PPM + 'px' }}>${m / 60}h</span>`)}</div>
@@ -169,7 +180,7 @@ export function Schedule() {
           </button>`;
         })}
       </div>`)}
-    </div>
+    </div></div>
     ${f ? html`<${Modal} title=${f.mode === 'new' ? (f.kind === 'oneoff' ? 'Nouvelle séance ponctuelle' : 'Nouveau créneau') : f.kind === 'oneoff' ? 'Séance ponctuelle' : 'Modifier la séance'} onClose=${() => setForm(null)}
       foot=${html`${f.mode === 'edit' ? html`<button class="btn danger" onClick=${delSlot}>${f.kind === 'oneoff' ? 'Supprimer' : 'Supprimer le créneau'}</button>` : null}<span class="grow"></span>
         <button class="btn" onClick=${() => setForm(null)}>Fermer</button><button class="btn primary" onClick=${save}>Enregistrer</button>`}>
