@@ -104,7 +104,7 @@ function layout(d, levels) {
 }
 
 /** Avancement d'une classe, déduit des séances : le chapitre le plus avancé de la dernière séance est « en cours », tous les autres chapitres travaillés sont « terminés ». */
-export function progressOf(d, classId, excludeKey) {
+export function progressOf(d, classId, excludeKey, raw) {
   const order = Object.fromEntries(d.chapters.map((c, i) => [c.id, i]));
   const ses = Object.values(d.sessions).filter(x => x.classId === classId && x.key !== excludeKey && chIds(x).some(id => id in order)).sort((a, b) => a.date.localeCompare(b.date));
   const out = {};
@@ -113,16 +113,26 @@ export function progressOf(d, classId, excludeKey) {
     const ids = chIds(ses[ses.length - 1]).filter(id => id in order).sort((a, b) => order[a] - order[b]);
     out[ids[ids.length - 1]] = 'doing';
   }
+  if (!raw) for (const id of Object.keys(order)) {
+    const m = (d.progress || {})[classId + '|' + id];
+    if (m === 'todo') delete out[id]; else if (m) out[id] = m;
+  }
   return out;
 }
+/** Statut suivant au clic : à venir → en cours → terminé → à venir. Une correction manuelle n'est gardée que si elle diffère du statut déduit des séances. */
+const cycle = (d, cid, chid) => {
+  const cur = progressOf(d, cid)[chid], nx = !cur ? 'doing' : cur === 'doing' ? 'done' : null;
+  const auto = progressOf(d, cid, null, true)[chid] || null;
+  mutate(dd => { const k = cid + '|' + chid; if (nx === auto) delete dd.progress[k]; else dd.progress[k] = nx || 'todo'; });
+};
 const STATUS_GLYPH = { doing: '◐', done: '✓' };
 
 function Chips({ d, level, ch, late }) {
   const cls = sortedClasses(d).filter(c => levelOf(c) === level);
   return html`${cls.map(c => {
     const st = progressOf(d, c.id)[ch.id];
-    return html`<span key=${c.id} class=${'cp' + (st ? ' ' + st : '') + (late && st !== 'done' ? ' late' : '')} style=${{ '--cc': classColor(c) }}
-      title=${{ doing: 'En cours', done: 'Terminé' }[st] || 'À venir'}>${c.name}${st ? ' ' + STATUS_GLYPH[st] : ''}</span>`;
+    return html`<button key=${c.id} class=${'cp' + (st ? ' ' + st : '') + (late && st !== 'done' ? ' late' : '')} style=${{ '--cc': classColor(c) }}
+      title=${{ doing: 'En cours', done: 'Terminé' }[st] || 'À venir'} onClick=${e => { e.stopPropagation(); cycle(d, c.id, ch.id); }}>${c.name}${st ? ' ' + STATUS_GLYPH[st] : ''}</button>`;
   })}`;
 }
 
@@ -152,7 +162,7 @@ function Calendar({ d, levels }) {
     ${levels.map((lv, i) => blocks[lv].map(b => {
       const p = partOf(b.ch.part), bg = p ? p.color : '#8a94a8';
       const late = nowWeek !== undefined && b.endWeek < nowWeek;
-      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 < 2 ? ' short' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
+      return html`<div class=${'cblock' + (b.planned ? ' planned' : '') + (b.row1 - b.row0 < 2 ? ' short' : '') + (b.cont ? ' ct' : '') + (b.last === false ? ' cb' : '')} key=${b.ch.id + "-" + b.row0} style=${{ gridRow: `${b.row0 + 2} / ${b.row1 + 3}`, gridColumn: gcol(i), background: bg, color: textOn(bg) }}>
         <small>Chapitre ${b.n}${b.cont ? ' (suite)' : ''}</small><b>${b.ch.title}</b>
         ${b.last === false ? null : html`<div class="cps"><${Chips} d=${d} level=${lv} ch=${b.ch} late=${late} /></div>`}</div>`;
     }))}
@@ -170,7 +180,7 @@ function ChapterList({ d, level }) {
     if (q < 0 || q >= idxs.length) return;
     const a = idxs[p], b = idxs[q]; [dd.chapters[a], dd.chapters[b]] = [dd.chapters[b], dd.chapters[a]];
   });
-  const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const x of Object.values(dd.sessions)) { if (x.chapterId === ch.id) delete x.chapterId; if (x.chapterIds) { x.chapterIds = x.chapterIds.filter(i => i !== ch.id); if (!x.chapterIds.length) delete x.chapterIds; } } }); };
+  const del = ch => { if (!confirm(`Supprimer le chapitre « ${ch.title} » ?`)) return; mutate(dd => { dd.chapters = dd.chapters.filter(c => c.id !== ch.id); for (const k of Object.keys(dd.progress || {})) if (k.endsWith('|' + ch.id)) delete dd.progress[k]; for (const x of Object.values(dd.sessions)) { if (x.chapterId === ch.id) delete x.chapterId; if (x.chapterIds) { x.chapterIds = x.chapterIds.filter(i => i !== ch.id); if (!x.chapterIds.length) delete x.chapterIds; } } }); };
   const total = list.reduce((n, c) => n + (c.weeks || 1), 0);
   if (!list.length) return html`<${Empty} title=${'Aucun chapitre en ' + level} />`;
   return html`<div class="list chscroll">${list.map((ch, i) => {

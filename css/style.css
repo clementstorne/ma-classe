@@ -326,3 +326,6 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .cal .cblock.planned{opacity:.62}
 .cal .cblock.short{display:grid;grid-template-columns:1fr auto;grid-template-areas:"s c" "t c";align-content:center;column-gap:6px}
 .cal .cblock.short small{grid-area:s}.cal .cblock.short b{grid-area:t;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal .cblock.short .cps{grid-area:c;margin:0;align-self:center}
+.cal .cblock.ct{border-top-left-radius:0;border-top-right-radius:0;margin-top:0}
+.cal .cblock.cb{border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0}
+.cp{cursor:pointer}
