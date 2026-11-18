@@ -169,11 +169,9 @@ export function Schedule() {
           const nAbs = se ? Object.values(se.marks).filter(m => m === 'A').length : 0;
           const bg = colorOf(o.classId);
           const note = '';
-          return html`<button class=${'slot' + (o.cancelled ? ' cancelled' : '') + (se && se.ds && !o.cancelled ? ' hasds' : '')} key=${o.id} style=${{ background: bg, color: textOn(bg), top: (toMin(o.start) - gStart) * PPM + 'px', height: (toMin(o.end) - toMin(o.start)) * PPM - 2 + 'px' }}
+          return html`<button class=${'slot' + (o.cancelled ? ' cancelled' : '')} key=${o.id} style=${{ background: bg, color: textOn(bg), top: (toMin(o.start) - gStart) * PPM + 'px', height: (toMin(o.end) - toMin(o.start)) * PPM - 2 + 'px' }}
             onClick=${e => { e.stopPropagation(); openOcc(o); }}>
             <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${room ? html` <small>· ${room.name}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
-            ${o.week && !o.oneOff ? html`<i class="wk" title=${'Semaine ' + o.week}>${o.week}</i>` : null}
-            <span>${o.start}–${o.end}</span>
             ${se && se.ds && !o.cancelled ? html`<span class="dsb">DS</span>` : null}
             ${se && se.validated && !o.cancelled ? html`<span class="tag">✓${nAbs ? ' · ' + nAbs + ' abs.' : ''}</span>` : null}
           </button>`;
