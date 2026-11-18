@@ -127,35 +127,56 @@ function frenchHolidays(y) {
   return [[f(1, 1), 'Jour de l\'An'], [at(1), 'Lundi de Pâques'], [f(5, 1), 'Fête du Travail'], [f(5, 8), 'Victoire 1945'], [at(39), 'Ascension'], [at(50), 'Lundi de Pentecôte'],
     [f(7, 14), 'Fête nationale'], [f(8, 15), 'Assomption'], [f(11, 1), 'Toussaint'], [f(11, 11), 'Armistice 1918'], [f(12, 25), 'Noël']].map(([s, n]) => ({ start: s, name: n }));
 }
+const kindOf = h => h.kind || (h.end && h.end !== h.start ? 'vac' : 'ferie');
 function Holidays() {
   const d = useStore();
-  const [f, setF] = useState({ name: '', start: '', end: '', etabId: '' });
-  const list = [...(d.holidays || [])].sort((a, b) => a.start.localeCompare(b.start));
+  const [f, setF] = useState({ name: '', start: '', end: '' });
+  const [g, setG] = useState({ name: '', start: '' });
+  const all = [...(d.holidays || [])].sort((a, b) => a.start.localeCompare(b.start));
+  const vacs = all.filter(h => kindOf(h) === 'vac'), feries = all.filter(h => kindOf(h) === 'ferie');
   const fmt = s => fromISOs(s);
-  function add() {
+  function addVac() {
     if (!f.name.trim() || !f.start) return toast('Indique un nom et une date de début.');
     const end = f.end && f.end >= f.start ? f.end : f.start;
-    mutate(dd => { dd.holidays.push({ id: uid(), name: f.name.trim(), start: f.start, end, etabId: f.etabId }); });
-    setF({ name: '', start: '', end: '', etabId: f.etabId });
+    mutate(dd => { dd.holidays.push({ id: uid(), kind: 'vac', name: f.name.trim(), start: f.start, end, etabId: '' }); });
+    setF({ name: '', start: '', end: '' });
+  }
+  function addFerie() {
+    if (!g.name.trim() || !g.start) return toast('Indique un nom et une date.');
+    mutate(dd => { dd.holidays.push({ id: uid(), kind: 'ferie', name: g.name.trim(), start: g.start, end: g.start, etabId: '' }); });
+    setG({ name: '', start: '' });
   }
   function fr() {
     const y = new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1; // année scolaire en cours
-    const all = [...frenchHolidays(y).filter(h => h.start >= `${y}-08-01`), ...frenchHolidays(y + 1).filter(h => h.start < `${y + 1}-08-01`)];
+    const hs = [...frenchHolidays(y).filter(h => h.start >= `${y}-08-01`), ...frenchHolidays(y + 1).filter(h => h.start < `${y + 1}-08-01`)];
     let n = 0;
-    mutate(dd => all.forEach(h => { if (!dd.holidays.some(x => x.start === h.start && x.name === h.name)) { dd.holidays.push({ id: uid(), name: h.name, start: h.start, end: h.start, etabId: '' }); n++; } }));
+    mutate(dd => hs.forEach(h => { if (!dd.holidays.some(x => x.start === h.start && x.name === h.name)) { dd.holidays.push({ id: uid(), kind: 'ferie', name: h.name, start: h.start, end: h.start, etabId: '' }); n++; } }));
     toast(n ? `${n} jours fériés ajoutés (${y}-${y + 1}).` : 'Déjà ajoutés.');
   }
-  return html`<div class="card col">
-    <p class="hint" style="margin:0">Les cours récurrents n'apparaissent pas dans l'emploi du temps pendant ces dates (les séances ponctuelles restent affichées).</p>
-    <div class="row" style="align-items:flex-end">
-      <${Field} label="Nom"><input value=${f.name} placeholder="ex. Vacances de Noël" onInput=${e => setF({ ...f, name: e.target.value })} /><//>
-      <${Field} label="Du"><input type="date" value=${f.start} onInput=${e => setF({ ...f, start: e.target.value })} /><//>
-      <${Field} label="Au (inclus, facultatif)"><input type="date" value=${f.end} onInput=${e => setF({ ...f, end: e.target.value })} /><//>
-      <button class="btn primary" onClick=${add}>＋ Ajouter</button></div>
-    <div class="row"><button class="btn" onClick=${fr}>Ajouter les jours fériés français de l'année scolaire</button></div>
-    ${list.length ? html`<div class="list">${list.map(h => html`<div class="item" key=${h.id} style="cursor:default"><div class="nm"><b>${h.name}</b>
-      <div class="small muted">${h.end && h.end !== h.start ? 'du ' + fmt(h.start) + ' au ' + fmt(h.end) : fmt(h.start)}${h.etabId ? ' · ' + ((d.etabs.find(e => e.id === h.etabId) || {}).name || '') : ''}</div></div>
-      <button class="btn small danger" onClick=${() => mutate(dd => { dd.holidays = dd.holidays.filter(x => x.id !== h.id); })}>Supprimer</button></div>`)}</div>` : html`<p class="muted" style="margin:0">Aucune date saisie.</p>`}</div>`;
+  const del = h => html`<button class="btn small danger" style="margin-left:auto" onClick=${() => mutate(dd => { dd.holidays = dd.holidays.filter(x => x.id !== h.id); })}>Supprimer</button>`;
+  const listOf = (arr, empty, range) => arr.length ? html`<div class="list">${arr.map(h => html`<div class="item" key=${h.id} style="cursor:default"><div class="nm"><b>${h.name}</b>
+      <div class="small muted">${range && h.end && h.end !== h.start ? 'du ' + fmt(h.start) + ' au ' + fmt(h.end) : fmt(h.start)}</div></div>${del(h)}</div>`)}</div>` : html`<p class="muted" style="margin:0">${empty}</p>`;
+  return html`<div>
+    <h3 style="margin:0 0 8px">Vacances scolaires</h3>
+    <div class="card col">
+      <p class="hint" style="margin:0">Les cours récurrents n'apparaissent pas dans l'emploi du temps pendant ces dates (les séances ponctuelles restent affichées).</p>
+      <div class="row" style="align-items:flex-end">
+        <${Field} label="Nom"><input value=${f.name} placeholder="ex. Vacances de Noël" onInput=${e => setF({ ...f, name: e.target.value })} /><//>
+        <${Field} label="Du"><input type="date" value=${f.start} onInput=${e => setF({ ...f, start: e.target.value })} /><//>
+        <${Field} label="Au (inclus)"><input type="date" value=${f.end} onInput=${e => setF({ ...f, end: e.target.value })} /><//>
+        <button class="btn primary" onClick=${addVac}>＋ Ajouter</button></div>
+      ${listOf(vacs, 'Aucune période de vacances saisie.', true)}
+    </div>
+    <h3 style="margin:22px 0 8px">Jours fériés</h3>
+    <div class="card col">
+      <div class="row" style="align-items:flex-end">
+        <${Field} label="Nom"><input value=${g.name} placeholder="ex. Pont de l'Ascension" onInput=${e => setG({ ...g, name: e.target.value })} /><//>
+        <${Field} label="Date"><input type="date" value=${g.start} onInput=${e => setG({ ...g, start: e.target.value })} /><//>
+        <button class="btn primary" onClick=${addFerie}>＋ Ajouter</button></div>
+      <div class="row"><button class="btn" onClick=${fr}>Ajouter les jours fériés français de l'année scolaire</button></div>
+      ${listOf(feries, 'Aucun jour férié saisi.', false)}
+    </div>
+  </div>`;
 }
 const fromISOs = s => fmtDateFull(s);
 

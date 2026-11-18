@@ -255,3 +255,4 @@ table.notes tbody tr:nth-child(even) td.moy{background:color-mix(in srgb,var(--c
 .roster .stu .nm{flex:1;min-width:0}
 .roster .stu .nm b{font-weight:700}
 .nav .ico{font-size:16px;margin-right:2px}
+.item>.btn.danger{margin-left:auto}
