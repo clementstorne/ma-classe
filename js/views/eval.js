@@ -51,7 +51,12 @@ export function Eval({ id, q }) {
     let si = sIndex(sel.sid), qi = qIndex(sel.qid);
     const adv = d.settings.advance;
     if (dir === 'next') {
-      if (adv === 'question') { qi++; if (qi >= allQ.length) { qi = 0; si++; } } else { si++; if (si >= ids.length) { si = 0; qi++; } }
+      if (adv === 'exercise') {
+        const ex = ev.exercises.find(x => x.questions.some(qq => qq.id === sel.qid));
+        const a = qIndex(ex.questions[0].id), b = a + ex.questions.length - 1;
+        qi++;
+        if (qi > b) { qi = a; si++; if (si >= ids.length) { si = 0; qi = b + 1; } }
+      } else if (adv === 'question') { qi++; if (qi >= allQ.length) { qi = 0; si++; } } else { si++; if (si >= ids.length) { si = 0; qi++; } }
       if (si >= ids.length || qi >= allQ.length) { setSel(null); return; }
     } else {
       // flèches : "vertical" = élèves en lignes → élève ; en colonnes → question
@@ -129,10 +134,12 @@ export function Eval({ id, q }) {
   const quick = [];
   if (selQ) { const step = selQ.max <= 1 ? 0.25 : 0.5; for (let v = 0; v <= selQ.max + 1e-9; v += step) quick.push(Math.round(v * 1000) / 1000); if (Math.abs(quick[quick.length - 1] - selQ.max) > 1e-9) quick.push(selQ.max); }
 
-  return html`<div class="page" style="max-width:none">
+  return html`<div class="page fitcol" style="max-width:none">
     <div class="page-head"><a class="btn ghost" href=${'#/class/' + ev.classId + '/evaluations'}>‹ ${cls.name}</a><h1>${ev.name}</h1>
       <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)} · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
       ${groups.length ? html`<select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${grp} onChange=${e => { setGrp(e.target.value); setSel(null); }}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
+      <select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${d.settings.advance} aria-label="Ordre de saisie" onChange=${e => mutate(dd => { dd.settings.advance = e.target.value; })}>
+        <option value="student">Saisie par question</option><option value="question">Saisie par élève</option><option value="exercise">Saisie par exercice</option></select>
       <button class="btn small" onClick=${() => { const v = !transposed; setTransposed(v); try { localStorage.setItem('transposed', v ? '1' : '0'); } catch { /* */ } }}>⇄ ${transposed ? 'Élèves en lignes' : 'Élèves en colonnes'}</button>
       <button class="btn small" onClick=${() => setBilan(true)}>Bilan des compétences</button>
       <button class="btn small" onClick=${() => setStruct(true)}>✎ Barème et compétences</button>
@@ -154,7 +161,6 @@ export function Eval({ id, q }) {
               ${studs.map(s => cell(s, it))}<td class="tot">${foot(it)}</td></tr>`;
         })}</tbody>`}
     </table></div>
-    <div class="pad-space"></div>
     ${sel && selS && selQ ? html`<div class="entry">
       <div class="who"><b>${displayName(selS)}</b><div class="muted small">${selQ.label} · sur ${fmtNum(selQ.max)}${(selQ.comps || []).length ? ' · ' + selQ.comps.join(', ') : ''}</div></div>
       <div class="qk">${quick.map(v => html`<button class=${v === selQ.max ? 'pri' : ''} onClick=${() => commit(v)}>${fmtNum(v)}</button>`)}

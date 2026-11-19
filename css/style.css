@@ -401,3 +401,5 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .ecbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--line)}
 .ecbar i{display:block;height:100%}
 .ecbar .lv-1{background:rgb(228,52,38)}.ecbar .lv-2{background:rgb(249,219,74)}.ecbar .lv-3{background:rgb(102,182,93)}.ecbar .lv-4{background:rgb(55,126,34)}
+
+.page.fitcol>.entry{position:static;flex:none;margin:10px -4px 0;border:1px solid var(--line);border-radius:14px;box-shadow:none}
