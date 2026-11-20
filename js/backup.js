@@ -4,7 +4,7 @@ import { S, buildBackup } from './store.js';
 import * as db from './db.js';
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const EVERY = 20 * 60e3, KEEP_DRIVE = 20, KEEP_LOCAL = 10;
+const EVERY = 20 * 60e3, KEEP_LOCAL = 10;
 const FOLDER = 'Ma classe';
 
 /* ---- état (hors des données de l'application, pour ne pas figurer dans les sauvegardes) ---- */
@@ -79,18 +79,15 @@ export async function driveUpload(interactive = false) {
   setLive({ busy: true, error: '' });
   try {
     const tk = await getToken(interactive), parent = await folderId(tk);
-    const stamp = new Date(); const p = n => String(n).padStart(2, '0');
-    const name = `ma-classe-${stamp.getFullYear()}-${p(stamp.getMonth() + 1)}-${p(stamp.getDate())}-${p(stamp.getHours())}h${p(stamp.getMinutes())}.json`;
-    const forVersion = S.data.updatedAt;
+    const name = 'ma-classe-sauvegarde.json', forVersion = S.data.updatedAt;
+    const q = encodeURIComponent(`name='${name}' and '${parent}' in parents and trashed=false`);
+    const found = (await api(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {}, tk)).files[0];
     const body = new FormData();
-    body.append('metadata', new Blob([JSON.stringify({ name, parents: [parent], mimeType: 'application/json' })], { type: 'application/json' }));
+    body.append('metadata', new Blob([JSON.stringify(found ? { name } : { name, parents: [parent], mimeType: 'application/json' })], { type: 'application/json' }));
     body.append('file', new Blob([buildBackup()], { type: 'application/json' }));
-    await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body }, tk);
+    await api(found ? `https://www.googleapis.com/upload/drive/v3/files/${found.id}?uploadType=multipart&fields=id` : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      { method: found ? 'PATCH' : 'POST', body }, tk);
     setCfg({ connected: true, lastDrive: Date.now(), driveFor: forVersion, needLogin: false });
-    // purge des plus anciennes versions
-    const q = encodeURIComponent(`'${parent}' in parents and trashed=false`);
-    const l = await api(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&pageSize=100&fields=files(id)`, {}, tk);
-    for (const f of l.files.slice(KEEP_DRIVE)) { try { await api(`https://www.googleapis.com/drive/v3/files/${f.id}`, { method: 'DELETE' }, tk); } catch { /* */ } }
     setLive({ busy: false });
     return true;
   } catch (e) {
