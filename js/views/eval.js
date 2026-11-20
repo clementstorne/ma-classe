@@ -214,7 +214,6 @@ function Structure({ ev, onClose }) {
 function Bilan({ ev, studs, lab, stats, comps, onClose }) {
   return html`<${Modal} wide title=${'Bilan des compétences · ' + ev.name} onClose=${onClose} foot=${html`<button class="btn primary" onClick=${onClose}>Fermer</button>`}>
     ${!comps.length ? html`<p class="muted">Aucune compétence n'est rattachée aux questions de cette évaluation.</p>` : html`
-    <div class="bilan-legend"><span><i class="lvc lv-1">1</i></span><span><i class="lvc lv-2">2</i></span><span><i class="lvc lv-3">3</i></span><span><i class="lvc lv-4">4</i></span></div>
     <div class="gridwrap" style="max-height:62dvh"><table class="bilan">
       <thead><tr><th class="stk">Élève</th>${comps.map(c => html`<th>${c}</th>`)}</tr></thead>
       <tbody>${studs.map(s => html`<tr key=${s.id}><th class="stk">${lab[s.id]}</th>${comps.map(c => { const lv = stats[s.id].levels[c]; return html`<td>${lv ? html`<i class=${'lvc lv-' + lv}>${lv}</i>` : null}</td>`; })}</tr>`)}</tbody>
