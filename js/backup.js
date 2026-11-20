@@ -1,10 +1,10 @@
-/* Sauvegardes automatiques : copies locales (une par jour) et envoi vers Google Drive (dossier « Ma classe »). */
+/* Sauvegarde automatique vers Google Drive (dossier « Ma classe »). */
 import { useState, useEffect } from '../vendor/preact-htm.js';
 import { S, buildBackup } from './store.js';
 import * as db from './db.js';
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const EVERY = 20 * 60e3, KEEP_LOCAL = 10;
+const EVERY = 20 * 60e3;
 const FOLDER = 'Ma classe';
 
 /* ---- état (hors des données de l'application, pour ne pas figurer dans les sauvegardes) ---- */
@@ -19,18 +19,6 @@ export function useBackup() {
   return { ...cfg(), ...live };
 }
 const setLive = p => { Object.assign(live, p); subs.forEach(f => f()); };
-
-/* ---- copies locales ---- */
-export async function listSnaps() { return (await db.kvGet('snaps')) || []; }
-export async function takeSnap() {
-  const snaps = await listSnaps(), day = new Date().toISOString().slice(0, 10);
-  const snap = { t: Date.now(), day, data: JSON.parse(JSON.stringify(S.data)) };
-  const i = snaps.findIndex(s => s.day === day);
-  if (i >= 0) snaps[i] = snap; else snaps.unshift(snap);
-  snaps.sort((a, b) => b.t - a.t);
-  await db.kvSet('snaps', snaps.slice(0, KEEP_LOCAL));
-  setCfg({ lastSnap: snap.t, snapFor: S.data.updatedAt });
-}
 
 /* ---- Google Drive ---- */
 let token = null, tokenExp = 0, gsi = null;
@@ -110,11 +98,11 @@ export function startBackups() {
   const tick = async () => {
     if (!S.ready || !S.data) return;
     const c = cfg(), v = S.data.updatedAt;
-    if (v && v !== c.snapFor && Date.now() - (c.lastSnap || 0) >= EVERY) await takeSnap();
     if (c.clientId && c.connected && !c.needLogin && navigator.onLine && !live.busy && v !== c.driveFor && Date.now() - last >= EVERY && Date.now() - (c.lastDrive || 0) >= EVERY) {
       last = Date.now(); await driveUpload(false);
     }
   };
+  db.kvSet('snaps', []).catch(() => {});
   if (cfg().clientId) preloadGoogle();
   setTimeout(tick, 5000);
   setInterval(tick, 60e3);
