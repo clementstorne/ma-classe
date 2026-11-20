@@ -133,6 +133,7 @@ export async function restoreBackup(text) {
   await flush();
   notify();
 }
+export async function restoreSnapshot(data) { S.data = migrate(JSON.parse(JSON.stringify(data))); S.data.updatedAt = Date.now(); await flush(); notify(); }
 export function markBackedUp() { mutate(d => { d.lastBackup = Date.now(); }); }
 export async function resetAll() {
   S.data = defaultData(); S.photos = {};

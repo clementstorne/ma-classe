@@ -1,10 +1,11 @@
-import { html, useState, useRef } from '../../vendor/preact-htm.js';
-import { useStore, mutate, weekLetter, buildBackup, restoreBackup, setPhoto, removePhoto, photoOf, ROOM_W, ROOM_H, markBackedUp, resetAll, defaultPeriods, defaultRoomSeats, S } from '../store.js';
+import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
+import { useStore, mutate, weekLetter, buildBackup, restoreBackup, setPhoto, removePhoto, photoOf, ROOM_W, ROOM_H, markBackedUp, restoreSnapshot, resetAll, defaultPeriods, defaultRoomSeats, S } from '../store.js';
 import { Modal, Field, toast } from './common.js';
 import { uid, resizeImage, imageSize, shareOrDownload, todayISO, addDays, iso, mondayOf, fmtDateFull } from '../util.js';
 import { go } from '../router.js';
 import { Etabs } from './etabs.js';
 import { Ico } from '../icons.js';
+import { useBackup, setCfg, driveUpload, driveDisconnect, listSnaps, preloadGoogle } from '../backup.js';
 
 const TABS = [['sauvegardes', 'Sauvegardes'], ['vacances', 'Vacances et jours fériés'], ['etablissements', 'Établissements'], ['competences', 'Compétences'], ['donnees', 'Données']];
 
@@ -13,6 +14,11 @@ export function Settings({ tab: t }) {
   const d = useStore();
   const file = useRef();
   const [busy, setBusy] = useState(false);
+  const bk = useBackup();
+  const [snaps, setSnaps] = useState([]);
+  useEffect(() => { listSnaps().then(setSnaps); }, [bk.lastSnap]);
+  useEffect(() => { if (bk.clientId) preloadGoogle(); }, [bk.clientId]);
+  const hm = t => t ? new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'jamais';
   const bytes = Math.round(buildBackup().length / 1024);
 
   async function exportBackup() {
@@ -43,6 +49,23 @@ export function Settings({ tab: t }) {
       <p style="margin:0" class=${stale ? '' : 'muted'}>${stale ? '⚠ ' : ''}Dernière sauvegarde : <b>${lastB}</b> · taille ≈ ${bytes} Ko</p>
       <div class="row"><button class="btn primary" disabled=${busy} onClick=${exportBackup}>${Ico('upload')} Exporter une sauvegarde</button>
         <button class="btn" onClick=${() => file.current.click()}>${Ico('download')} Restaurer depuis un fichier</button><input ref=${file} type="file" accept=".json,application/json" hidden onChange=${onRestore} /></div>
+    </div>
+
+    <div class="card col" style="margin-top:14px">
+      <b>Google Drive</b>
+      <${Field} label="Identifiant client Google"><input value=${bk.clientId || ''} placeholder="xxxxxxxx.apps.googleusercontent.com" onInput=${e => setCfg({ clientId: e.target.value.trim(), connected: false })} /><//>
+      <p style="margin:0" class=${bk.error || bk.needLogin ? '' : 'muted'}>${bk.error ? '⚠ ' + bk.error + ' · ' : ''}Dernière sauvegarde Drive : <b>${hm(bk.lastDrive)}</b></p>
+      <div class="row">
+        ${bk.connected ? html`<button class="btn primary" disabled=${bk.busy} onClick=${async () => { const ok = await driveUpload(true); toast(ok ? 'Sauvegarde envoyée sur Drive' : 'Échec de la sauvegarde'); }}>${Ico('upload')} ${bk.needLogin ? 'Reconnecter et sauvegarder' : 'Sauvegarder maintenant'}</button>
+          <button class="btn" onClick=${driveDisconnect}>Déconnecter</button>`
+        : html`<button class="btn primary" disabled=${bk.busy || !bk.clientId} onClick=${async () => { const ok = await driveUpload(true); toast(ok ? 'Drive connecté, sauvegarde envoyée' : 'Connexion impossible'); }}>Se connecter à Drive</button>`}
+      </div>
+    </div>
+
+    <div class="card col" style="margin-top:14px">
+      <b>Copies automatiques sur cet appareil</b>
+      ${snaps.length ? html`<div class="list">${snaps.map(sn => html`<div class="item" key=${sn.t}><div class="grow">${hm(sn.t)}</div>
+        <button class="btn small" onClick=${async () => { if (confirm('Remplacer les données actuelles par cette copie ?')) { await restoreSnapshot(sn.data); toast('Copie restaurée'); } }}>Restaurer</button></div>`)}</div>` : html`<p class="muted" style="margin:0">Aucune copie pour l'instant</p>`}
     </div>
 
 </div>`}

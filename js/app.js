@@ -10,6 +10,7 @@ import { Settings } from './views/settings.js';
 import { Ico } from './icons.js';
 import { Salles, RoomEditor } from './views/salles.js';
 import { Progressions } from './views/progressions.js';
+import { startBackups } from './backup.js';
 
 function App() {
   const d = useStore();
@@ -37,7 +38,7 @@ function App() {
     <main class=${'main' + ((nav === 'edt' && !a) || (a === 'class' && (c === 'suivi' || c === 'notes')) || a === 'eval' || (a === 'progressions') ? ' fit' : '') + (a === 'minuteur' ? ' fit flush' : '')}>${view}</main></div>`;
 }
 
-init().then(() => render(html`<${App} />`, document.getElementById('app')));
+init().then(() => { render(html`<${App} />`, document.getElementById('app')); startBackups(); });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
