@@ -1,11 +1,11 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, weekLetter, buildBackup, restoreBackup, setPhoto, removePhoto, photoOf, ROOM_W, ROOM_H, markBackedUp, resetAll, defaultPeriods, defaultRoomSeats, S } from '../store.js';
+import { useStore, mutate, weekLetter, buildBackup, restoreBackup, setPhoto, removePhoto, photoOf, ROOM_W, ROOM_H, markBackedUp, restoreSnapshot, resetAll, defaultPeriods, defaultRoomSeats, S } from '../store.js';
 import { Modal, Field, toast } from './common.js';
 import { uid, resizeImage, imageSize, shareOrDownload, todayISO, addDays, iso, mondayOf, fmtDateFull } from '../util.js';
 import { go } from '../router.js';
 import { Etabs } from './etabs.js';
 import { Ico } from '../icons.js';
-import { useBackup, setCfg, driveUpload, driveDisconnect, preloadGoogle } from '../backup.js';
+import { useBackup, setCfg, driveUpload, driveDisconnect, preloadGoogle, getLocalBackup, saveLocalBackup } from '../backup.js';
 
 const TABS = [['sauvegardes', 'Sauvegardes'], ['vacances', 'Vacances et jours fériés'], ['etablissements', 'Établissements'], ['competences', 'Compétences'], ['donnees', 'Données']];
 
@@ -16,6 +16,8 @@ export function Settings({ tab: t }) {
   const [busy, setBusy] = useState(false);
   const bk = useBackup();
   useEffect(() => { if (bk.clientId) preloadGoogle(); }, [bk.clientId]);
+  const [lb, setLb] = useState(null);
+  useEffect(() => { getLocalBackup().then(setLb); }, [bk.lastLocal]);
   const hm = t => t ? new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'jamais';
   const bytes = Math.round(buildBackup().length / 1024);
 
@@ -58,6 +60,13 @@ export function Settings({ tab: t }) {
           <button class="btn" onClick=${driveDisconnect}>Déconnecter</button>`
         : html`<button class="btn primary" disabled=${bk.busy || !bk.clientId} onClick=${async () => { const ok = await driveUpload(true); toast(ok ? 'Drive connecté, sauvegarde envoyée' : 'Connexion impossible'); }}>Se connecter à Drive</button>`}
       </div>
+    </div>
+
+    <div class="card col" style="margin-top:14px">
+      <b>Sauvegarde locale</b>
+      <p style="margin:0" class="muted">${lb ? 'Enregistrée le ' + hm(lb.t) : 'Aucune sauvegarde locale'}</p>
+      <div class="row"><button class="btn" onClick=${async () => { await saveLocalBackup(); toast('Sauvegarde locale mise à jour'); }}>${Ico('upload')} Sauvegarder maintenant</button>
+        ${lb ? html`<button class="btn" onClick=${async () => { if (confirm('Remplacer les données actuelles par la sauvegarde locale ?')) { await restoreSnapshot(lb.data); toast('Sauvegarde locale restaurée'); } }}>${Ico('download')} Restaurer</button>` : null}</div>
     </div>
 
 </div>`}

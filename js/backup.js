@@ -1,6 +1,7 @@
 /* Sauvegarde automatique vers Google Drive (dossier « Ma classe »). */
 import { useState, useEffect } from '../vendor/preact-htm.js';
-import { S, buildBackup } from './store.js';
+import { S, buildBackup, restoreBackup } from './store.js';
+import { toast } from './views/common.js';
 import * as db from './db.js';
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -20,7 +21,12 @@ export function useBackup() {
 }
 const setLive = p => { Object.assign(live, p); subs.forEach(f => f()); };
 
+/* ---- sauvegarde locale (une seule, écrasée) ---- */
+export const getLocalBackup = () => db.kvGet('localBackup');
+export async function saveLocalBackup() { await db.kvSet('localBackup', { t: Date.now(), data: JSON.parse(JSON.stringify(S.data)) }); setCfg({ lastLocal: Date.now() }); }
+
 /* ---- Google Drive ---- */
+let synced = false;   // vrai une fois comparée la version de Drive avec celle de l'appareil
 let token = null, tokenExp = 0, gsi = null;
 function loadGsi() {
   return gsi ||= new Promise((res, rej) => {
@@ -67,9 +73,25 @@ export async function driveUpload(interactive = false) {
   setLive({ busy: true, error: '' });
   try {
     const tk = await getToken(interactive), parent = await folderId(tk);
-    const name = 'ma-classe-sauvegarde.json', forVersion = S.data.updatedAt;
+    const name = 'ma-classe-sauvegarde.json';
     const q = encodeURIComponent(`name='${name}' and '${parent}' in parents and trashed=false`);
     const found = (await api(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {}, tk)).files[0];
+    if (!synced && found) {   // au lancement : on garde la version la plus récente
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${found.id}?alt=media`, { headers: { Authorization: 'Bearer ' + tk } });
+      if (r.status === 401) { token = null; throw new Error('auth'); }
+      if (!r.ok) throw new Error('Drive ' + r.status);
+      const text = await r.text(), remote = (JSON.parse(text).data || {}).updatedAt || 0;
+      if (remote > (S.data.updatedAt || 0)) {
+        await saveLocalBackup();
+        await restoreBackup(text);
+        synced = true; setCfg({ connected: true, lastDrive: Date.now(), driveFor: S.data.updatedAt, needLogin: false }); setLive({ busy: false });
+        toast('Données plus récentes chargées depuis Drive');
+        return true;
+      }
+    }
+    synced = true;
+    const forVersion = S.data.updatedAt;
+    await saveLocalBackup();
     const body = new FormData();
     body.append('metadata', new Blob([JSON.stringify(found ? { name } : { name, parents: [parent], mimeType: 'application/json' })], { type: 'application/json' }));
     body.append('file', new Blob([buildBackup()], { type: 'application/json' }));
@@ -98,11 +120,10 @@ export function startBackups() {
   const tick = async () => {
     if (!S.ready || !S.data) return;
     const c = cfg(), v = S.data.updatedAt;
-    if (c.clientId && c.connected && !c.needLogin && navigator.onLine && !live.busy && v !== c.driveFor && Date.now() - last >= EVERY && Date.now() - (c.lastDrive || 0) >= EVERY) {
+    if (c.clientId && c.connected && !c.needLogin && navigator.onLine && !live.busy && (!synced || v !== c.driveFor) && Date.now() - last >= EVERY && (!synced || Date.now() - (c.lastDrive || 0) >= EVERY)) {
       last = Date.now(); await driveUpload(false);
     }
   };
-  db.kvSet('snaps', []).catch(() => {});
   if (cfg().clientId) preloadGoogle();
   setTimeout(tick, 5000);
   setInterval(tick, 60e3);
