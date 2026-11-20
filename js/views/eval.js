@@ -16,7 +16,6 @@ export function Eval({ id, q }) {
   const [meta, setMeta] = useState(false);
   const [bad, setBad] = useState(false);
   const [bilan, setBilan] = useState(false);
-  const [grp, setGrp] = useState('');
   const [transposed, setTransposed] = useState(() => { try { return localStorage.getItem('transposed') === '1'; } catch { return false; } });
   const inp = useRef();
   const cls = ev && classById(d, ev.classId);
@@ -24,11 +23,10 @@ export function Eval({ id, q }) {
   useEffect(() => { if (sel) { setBad(false); const el = document.querySelector('td.q.sel'); el && el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); if (inp.current) { inp.current.value = ''; if (matchMedia('(pointer:fine)').matches) inp.current.focus(); } } }, [sel && sel.sid, sel && sel.qid]);
 
   if (!ev || !cls) return html`<${Empty} title="Évaluation introuvable"><a class="btn" href="#/classes">Retour</a><//>`;
-  const groups = groupsOf(cls);
   const classStuds = studentsOf(d, ev.classId);
   const lab = seatLabels(classStuds);
   const sById = Object.fromEntries(classStuds.map(s => [s.id, s]));
-  const studs = classStuds.filter(s => !grp || s.group === grp);
+  const studs = classStuds;
   const comps = d.settings.comps;
   const usedComps = comps.filter(c => ev.exercises.some(x => x.questions.some(qq => (qq.comps || []).includes(c))));
   const stats = Object.fromEntries(studs.map(s => [s.id, studentStats(ev, s.id, comps, s)]));
@@ -137,7 +135,6 @@ export function Eval({ id, q }) {
   return html`<div class="page fitcol" style="max-width:none">
     <div class="page-head"><a class="btn ghost" href=${'#/class/' + ev.classId + '/evaluations'}>‹ ${cls.name}</a><h1>${ev.name}</h1>
       <span class="sub">${avg == null ? 'aucune note saisie' : `moyenne ${f1(avg)} · ${nGraded}/${studs.length} élèves notés · barème ${fmtNum(maxTotal)}`}</span><span class="grow"></span>
-      ${groups.length ? html`<select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${grp} onChange=${e => { setGrp(e.target.value); setSel(null); }}><option value="">Toute la classe</option>${groups.map(g => html`<option value=${g}>Groupe ${g}</option>`)}</select>` : null}
       <select class="inp" style="width:auto;min-height:34px;padding:4px 10px" value=${d.settings.advance} aria-label="Ordre de saisie" onChange=${e => mutate(dd => { dd.settings.advance = e.target.value; })}>
         <option value="student">Saisie par question</option><option value="question">Saisie par élève</option><option value="exercise">Saisie par exercice</option></select>
       <button class="btn small" onClick=${() => { const v = !transposed; setTransposed(v); try { localStorage.setItem('transposed', v ? '1' : '0'); } catch { /* */ } }}>⇄ ${transposed ? 'Élèves en lignes' : 'Élèves en colonnes'}</button>
@@ -183,9 +180,7 @@ function Meta({ ev, onClose }) {
   }
   return html`<${Modal} title="Évaluation" onClose=${onClose} foot=${html`<button class="btn danger" onClick=${del}>Supprimer</button><span class="grow"></span><button class="btn primary" onClick=${onClose}>OK</button>`}>
     <${Field} label="Nom"><input value=${ev.name} onInput=${e => set({ name: e.target.value })} /><//>
-    <${Field} label="Date"><input type="date" value=${ev.date} onInput=${e => e.target.value && set({ date: e.target.value })} /><//>
-    <${Field} label="Après chaque saisie, passer à…"><select value=${d.settings.advance} onChange=${e => mutate(dd => { dd.settings.advance = e.target.value; })}>
-      <option value="student">l'élève suivant (même question)</option><option value="question">la question suivante (même élève)</option></select><//><//>`;
+    <${Field} label="Date"><input type="date" value=${ev.date} onInput=${e => e.target.value && set({ date: e.target.value })} /><//><//>`;
 }
 
 function Structure({ ev, onClose }) {
