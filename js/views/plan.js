@@ -180,15 +180,19 @@ function fit(ctx, text, maxW) { let s = text; while (s.length > 1 && ctx.measure
 export function nameSize(text, w) {
   const avail = w - 12, longest = Math.max(...text.split(/(?<=[- ])/).map(x => x.trim().length));
   const one = Math.floor(avail / (text.length * 0.6));
-  if (one >= 15) return 15;
-  return Math.max(9, Math.min(15, Math.max(one, Math.floor(avail / (longest * 0.6)))));
+  if (one >= 22) return 22;
+  return Math.max(10, Math.min(22, Math.max(one, Math.floor(avail / (longest * 0.6)))));
 }
 /** Réduit la police pour que le texte tienne en entier dans maxW. */
 function shrink(ctx, text, maxW, size, weight = 700) { let z = size; do { ctx.font = `${weight} ${z}px system-ui, sans-serif`; z--; } while (z >= 8 && ctx.measureText(text).width > maxW); }
 export async function renderPlanImage(room, seatMap, byId, lab, title) {
-  const K = 2, RH = roomH(room), pad = 0;
-  const c = document.createElement('canvas'); c.width = ROOM_W * K; c.height = RH * K;
-  const ctx = c.getContext('2d'); ctx.scale(K, K);
+  const K = 2, RH = roomH(room), M = 24;
+  // l'image est recadrée sur les élèves placés pour que photos et noms soient le plus grands possible à l'affichage
+  const occ = room.items.filter(it => it.kind === 'seat' && byId[seatMap[it.id]]);
+  const x0 = occ.length ? Math.max(0, Math.min(...occ.map(i => i.x)) - M) : 0, y0 = occ.length ? Math.max(0, Math.min(...occ.map(i => i.y)) - M) : 0;
+  const x1 = occ.length ? Math.min(ROOM_W, Math.max(...occ.map(i => i.x + i.w)) + M) : ROOM_W, y1 = occ.length ? Math.min(RH, Math.max(...occ.map(i => i.y + i.h)) + M) : RH;
+  const c = document.createElement('canvas'); c.width = Math.round((x1 - x0) * K); c.height = Math.round((y1 - y0) * K);
+  const ctx = c.getContext('2d'); ctx.scale(K, K); ctx.translate(-x0, -y0);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ROOM_W, RH);
   const bg = photoOf('bg-' + room.id);
   if (bg) ctx.drawImage(await loadImg(bg), 0, 0, ROOM_W, RH);
@@ -202,7 +206,7 @@ export async function renderPlanImage(room, seatMap, byId, lab, title) {
     const s = byId[seatMap[it.id]];
     if (!s) continue; // place vide : rien
     rr(ctx, it.x, it.y, it.w, it.h, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#cfd5e1'; ctx.stroke();
-    const px = it.x + 4, py = it.y + 4, pw = it.w - 8, ph = it.h - 8 - 22;
+    const px = it.x + 4, py = it.y + 4, pw = it.w - 8, ph = it.h - 8;
     ctx.save(); rr(ctx, px, py, pw, ph, 8); ctx.clip();
     const url = photoOf(s.id);
     if (url) {
@@ -214,16 +218,22 @@ export async function renderPlanImage(room, seatMap, byId, lab, title) {
       ctx.fillText(initials(s).toUpperCase(), px + pw / 2, py + ph / 2);
     }
     ctx.restore();
-    ctx.fillStyle = '#1b2333'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const nm = lab[s.id] || s.prenom, fs = nameSize(nm, it.w);
-    ctx.font = `700 ${fs}px system-ui, sans-serif`;
+    ctx.font = `800 ${fs}px system-ui, sans-serif`;
     let lines = [nm];
     if (ctx.measureText(nm).width > it.w - 8) {
       lines = []; let cur = '';
       for (const seg of nm.split(/(?<=[- ])/)) { if (cur && ctx.measureText((cur + seg).trim()).width > it.w - 8) { lines.push(cur.trim()); cur = seg; } else cur += seg; }
       lines.push(cur.trim());
     }
-    lines.forEach((ln, i) => ctx.fillText(ln, it.x + it.w / 2, it.y + it.h - 15 - (lines.length - 1 - i) * (fs + 1) + (lines.length > 1 ? -(fs + 1) / 2 + 0 : 0)));
+    // le nom est posé sur le bas de la photo, sur un bandeau blanc
+    const lh = fs + 2, bh = lines.length * lh + 8;
+    ctx.save(); rr(ctx, px, py, pw, ph, 8); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.93)'; ctx.fillRect(px, py + ph - bh, pw, bh);
+    ctx.restore();
+    ctx.fillStyle = '#10182b';
+    lines.forEach((ln, i) => ctx.fillText(ln, it.x + it.w / 2, py + ph - bh + 4 + lh * i + lh / 2));
   }
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
