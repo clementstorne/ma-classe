@@ -180,66 +180,50 @@ function fit(ctx, text, maxW) { let s = text; while (s.length > 1 && ctx.measure
 export function nameSize(text, w) {
   const avail = w - 12, longest = Math.max(...text.split(/(?<=[- ])/).map(x => x.trim().length));
   const one = Math.floor(avail / (text.length * 0.6));
-  if (one >= 26) return 26;
-  return Math.max(10, Math.min(26, Math.max(one, Math.floor(avail / (longest * 0.6)))));
+  if (one >= 15) return 15;
+  return Math.max(9, Math.min(15, Math.max(one, Math.floor(avail / (longest * 0.6)))));
 }
 /** Réduit la police pour que le texte tienne en entier dans maxW. */
 function shrink(ctx, text, maxW, size, weight = 700) { let z = size; do { ctx.font = `${weight} ${z}px system-ui, sans-serif`; z--; } while (z >= 8 && ctx.measureText(text).width > maxW); }
 export async function renderPlanImage(room, seatMap, byId, lab, title) {
-  const K = 2, RH = roomH(room), E = 45;
+  const K = 2, RH = roomH(room), pad = 0;
   const c = document.createElement('canvas'); c.width = ROOM_W * K; c.height = RH * K;
   const ctx = c.getContext('2d'); ctx.scale(K, K);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ROOM_W, RH);
   const bg = photoOf('bg-' + room.id);
   if (bg) ctx.drawImage(await loadImg(bg), 0, 0, ROOM_W, RH);
-  // les cartes des élèves placés sont agrandies (photo non déformée) et écartées pour occuper la place libre de la salle
-  const occ = room.items.filter(it => it.kind === 'seat' && byId[seatMap[it.id]]);
-  let g = 1, T = it => ({ ...it });
-  if (occ.length) {
-    const bx0 = Math.min(...occ.map(i => i.x)), bx1 = Math.max(...occ.map(i => i.x + i.w)), by0 = Math.min(...occ.map(i => i.y)), by1 = Math.max(...occ.map(i => i.y + i.h));
-    const ax0 = Math.max(20, bx0 - E), ax1 = Math.min(ROOM_W - 20, bx1 + E), ay0 = Math.max(20, by0 - E), ay1 = Math.min(RH - 20, by1 + E);
-    g = Math.min(1.6, (ax1 - ax0) / (bx1 - bx0), (ay1 - ay0) / (by1 - by0));
-    if (g > 1.02) {
-      const cx = (ax0 + ax1) / 2, cy = (ay0 + ay1) / 2, mx = (bx0 + bx1) / 2, my = (by0 + by1) / 2;
-      T = it => ({ ...it, x: cx + (it.x - mx) * g, y: cy + (it.y - my) * g, w: it.w * g, h: it.h * g });
-    } else g = 1;
-  }
-  const band = Math.round(26 * g);
-  for (const src of room.items) {
-    if (src.kind === 'label') {
-      const it = src;
+  for (const it of room.items) {
+    if (it.kind === 'label') {
       rr(ctx, it.x, it.y, it.w, it.h, 10); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a8499'; ctx.stroke();
       ctx.fillStyle = '#5b6578'; ctx.font = '700 20px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(fit(ctx, it.text.toUpperCase(), it.w - 12), it.x + it.w / 2, it.y + it.h / 2);
       continue;
     }
-    const s = byId[seatMap[src.id]];
+    const s = byId[seatMap[it.id]];
     if (!s) continue; // place vide : rien
-    const it = T(src);
-    rr(ctx, it.x, it.y, it.w, it.h, 12 * g); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#cfd5e1'; ctx.stroke();
-    const px = it.x + 4, py = it.y + 4, pw = it.w - 8, ph = it.h - 8 - band;
-    ctx.save(); rr(ctx, px, py, pw, ph, 8 * g); ctx.clip();
+    rr(ctx, it.x, it.y, it.w, it.h, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#cfd5e1'; ctx.stroke();
+    const px = it.x + 4, py = it.y + 4, pw = it.w - 8, ph = it.h - 8 - 22;
+    ctx.save(); rr(ctx, px, py, pw, ph, 8); ctx.clip();
     const url = photoOf(s.id);
     if (url) {
       const im = await loadImg(url), k = Math.max(pw / im.width, ph / im.height), dw = im.width * k, dh = im.height * k;
       ctx.drawImage(im, px + (pw - dw) / 2, py + Math.min(0, (ph - dh) * 0.2), dw, dh);
     } else {
       ctx.fillStyle = '#e8edff'; ctx.fillRect(px, py, pw, ph);
-      ctx.fillStyle = '#3b5bdb'; ctx.font = `800 ${Math.round(26 * g)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#3b5bdb'; ctx.font = '800 26px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(initials(s).toUpperCase(), px + pw / 2, py + ph / 2);
     }
     ctx.restore();
-    ctx.fillStyle = '#10182b'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#1b2333'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const nm = lab[s.id] || s.prenom, fs = nameSize(nm, it.w);
-    ctx.font = `800 ${fs}px system-ui, sans-serif`;
+    ctx.font = `700 ${fs}px system-ui, sans-serif`;
     let lines = [nm];
     if (ctx.measureText(nm).width > it.w - 8) {
       lines = []; let cur = '';
       for (const seg of nm.split(/(?<=[- ])/)) { if (cur && ctx.measureText((cur + seg).trim()).width > it.w - 8) { lines.push(cur.trim()); cur = seg; } else cur += seg; }
       lines.push(cur.trim());
     }
-    const lh = fs + 1, cy0 = it.y + it.h - 4 - band / 2;
-    lines.forEach((ln, i) => ctx.fillText(ln, it.x + it.w / 2, cy0 + (i - (lines.length - 1) / 2) * lh));
+    lines.forEach((ln, i) => ctx.fillText(ln, it.x + it.w / 2, it.y + it.h - 15 - (lines.length - 1 - i) * (fs + 1) + (lines.length > 1 ? -(fs + 1) / 2 + 0 : 0)));
   }
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
