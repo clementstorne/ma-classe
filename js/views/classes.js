@@ -139,15 +139,19 @@ function NotesList({ cls, studs }) {
   const d = useStore();
   const evs = d.evals.filter(e => e.classId === cls.id).sort((a, b) => b.date.localeCompare(a.date));
   const etab = etabOf(d, cls);
+  const [draft, setDraft] = useState(null);
   function create() {
-    const ev = { id: uid(), classId: cls.id, name: 'Nouvelle évaluation', date: todayISO(), scores: {},
+    const ev = { id: uid(), classId: cls.id, name: draft.name.trim(), date: draft.date, scores: {},
       exercises: [{ id: uid(), title: 'Exercice 1', questions: [{ id: uid(), label: '1', max: 1, comps: [] }] }] };
     mutate(dd => dd.evals.push(ev));
     go(`/eval/${ev.id}?edit=1`);
   }
   const byId = Object.fromEntries(studs.map(s => [s.id, s]));
   const ids = studs.map(s => s.id), comps = d.settings.comps;
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${create}>${Ico('plus')} Créer une évaluation</button></div>
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setDraft({ name: '', date: todayISO() })}>${Ico('plus')} Créer une évaluation</button></div>
+    ${draft ? html`<${Modal} title="Créer une évaluation" onClose=${() => setDraft(null)} foot=${html`<button class="btn" onClick=${() => setDraft(null)}>Annuler</button><button class="btn primary" disabled=${!draft.name.trim() || !draft.date} onClick=${create}>Créer</button>`}>
+      <${Field} label="Nom"><input autofocus value=${draft.name} placeholder="Ex. : DS n°2" onInput=${e => setDraft({ ...draft, name: e.target.value })} /><//>
+      <${Field} label="Date"><input type="date" value=${draft.date} onInput=${e => setDraft({ ...draft, date: e.target.value })} /><//><//>` : null}
     ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
     : html`<div class="eval-cards">${evs.map(ev => {
         const sm = evalSummary(ev, ids, comps, byId);
