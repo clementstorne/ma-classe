@@ -2,7 +2,7 @@ import { html, useState } from '../../vendor/preact-htm.js';
 import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
 import { planKey, parsePlanKey, groupStudents } from '../store.js';
 import { PlanThumb } from './salles.js';
-import { LEVELS } from './progressions.js';
+import { LEVELS, levelOf } from './progressions.js';
 import { Modal, Field, Avatar, Empty, PeriodSelect, ColorPicker, toast } from './common.js';
 import { StudentSheet } from './student.js';
 import { NotesTab } from './notes.js';
@@ -140,9 +140,14 @@ function NotesList({ cls, studs }) {
   const evs = d.evals.filter(e => e.classId === cls.id).sort((a, b) => b.date.localeCompare(a.date));
   const etab = etabOf(d, cls);
   const [draft, setDraft] = useState(null);
+  const lvl = levelOf(cls);
+  const sources = !lvl ? [] : d.evals.filter(e => e.classId !== cls.id).filter(e => { const c = classById(d, e.classId); return c && levelOf(c) === lvl; })
+    .sort((a, b) => b.date.localeCompare(a.date));
   function create() {
+    const src = draft.from ? d.evals.find(e => e.id === draft.from) : null;
     const ev = { id: uid(), classId: cls.id, name: draft.name.trim(), date: draft.date, scores: {},
-      exercises: [{ id: uid(), title: 'Exercice 1', questions: [{ id: uid(), label: '1', max: 1, comps: [] }] }] };
+      exercises: src ? src.exercises.map(x => ({ ...x, id: uid(), questions: x.questions.map(q => ({ ...q, id: uid(), comps: [...(q.comps || [])] })) }))
+        : [{ id: uid(), title: 'Exercice 1', questions: [{ id: uid(), label: '1', max: 1, comps: [] }] }] };
     mutate(dd => dd.evals.push(ev));
     go(`/eval/${ev.id}?edit=1`);
   }
@@ -151,7 +156,9 @@ function NotesList({ cls, studs }) {
   return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setDraft({ name: '', date: todayISO() })}>${Ico('plus')} Créer une évaluation</button></div>
     ${draft ? html`<${Modal} title="Créer une évaluation" onClose=${() => setDraft(null)} foot=${html`<button class="btn" onClick=${() => setDraft(null)}>Annuler</button><button class="btn primary" disabled=${!draft.name.trim() || !draft.date} onClick=${create}>Créer</button>`}>
       <${Field} label="Nom"><input autofocus value=${draft.name} placeholder="Ex. : DS n°2" onInput=${e => setDraft({ ...draft, name: e.target.value })} /><//>
-      <${Field} label="Date"><input type="date" value=${draft.date} onInput=${e => setDraft({ ...draft, date: e.target.value })} /><//><//>` : null}
+      <${Field} label="Date"><input type="date" value=${draft.date} onInput=${e => setDraft({ ...draft, date: e.target.value })} /><//>
+      ${sources.length ? html`<${Field} label="Copier depuis une autre classe"><select value=${draft.from || ''} onChange=${e => { const ev = sources.find(x => x.id === e.target.value); setDraft({ ...draft, from: e.target.value, name: ev && !draft.name.trim() ? ev.name : draft.name }); }}>
+        <option value="">Évaluation vierge</option>${sources.map(e => html`<option key=${e.id} value=${e.id}>${classById(d, e.classId).name} · ${e.name}</option>`)}</select><//>` : null}<//>` : null}
     ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
     : html`<div class="eval-cards">${evs.map(ev => {
         const sm = evalSummary(ev, ids, comps, byId);
