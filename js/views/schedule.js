@@ -12,6 +12,12 @@ export function Schedule() {
   const [ws, setWsState] = useState(() => { try { const v = sessionStorage.getItem('edtWeek'); if (v) return fromISO(v); } catch { /* */ } return mondayOf(new Date()); });
   const setWs = w => { setWsState(w); try { sessionStorage.setItem('edtWeek', iso(w)); } catch { /* */ } };
   const [edit, setEdit] = useState(false);
+  const [, setTick] = useState(0);   // rafraîchit le marqueur de l'heure
+  useEffect(() => {
+    const f = () => setTick(n => n + 1), t = setInterval(f, 30e3);
+    document.addEventListener('visibilitychange', f); window.addEventListener('focus', f);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', f); window.removeEventListener('focus', f); };
+  }, []);
   const [form, setForm] = useState(null);
   const boxRef = useRef();
   const [boxH, setBoxH] = useState(0);
