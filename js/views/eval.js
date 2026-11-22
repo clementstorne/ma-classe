@@ -204,7 +204,7 @@ function Structure({ ev, onClose }) {
         <button class="btn small danger" onClick=${() => { if (confirm('Supprimer cet exercice ?')) setEx(ex.filter((_, i) => i !== ei)); }}>Supprimer l'exercice</button></div>
       ${e.questions.map((qq, qi) => html`<div key=${qq.id} class="col" style="gap:6px"><div class="qrow">
           <input class="inp" value=${qq.label} aria-label="Libellé" onInput=${v => upd(ei, x => { x.questions[qi].label = v.target.value; })} />
-          <input class="inp" inputmode="decimal" value=${fmtNum(qq.max)} aria-label="Barème" onInput=${v => { const n = Number(v.target.value.replace(',', '.')); upd(ei, x => { x.questions[qi].max = Number.isFinite(n) ? n : 0; }); }} />
+          <input class="inp" inputmode="decimal" key=${qq.id} defaultValue=${fmtNum(qq.max)} aria-label="Barème" onInput=${v => { const n = Number(v.target.value.replace(',', '.')); upd(ei, x => { x.questions[qi].max = Number.isFinite(n) ? n : 0; }); }} />
           <div class="comp-chips">${comps.map(c => html`<button class=${(qq.comps || []).includes(c) ? 'on' : ''} onClick=${() => upd(ei, x => { const a = x.questions[qi].comps ||= []; const i = a.indexOf(c); if (i >= 0) a.splice(i, 1); else a.push(c); })}>${c}</button>`)}</div>
           <button class="btn small ghost" aria-label="Supprimer la question" onClick=${() => upd(ei, x => { x.questions.splice(qi, 1); })}>🗑</button></div></div>`)}
       <div><button class="btn small" onClick=${() => upd(ei, x => { x.questions.push({ id: uid(), label: String(x.questions.length + 1), max: 1, comps: [] }); })}>＋ Question</button></div></div>`)}
