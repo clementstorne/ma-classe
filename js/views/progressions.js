@@ -1,5 +1,5 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, sortedClasses, holidayOn, weekLetter, occurrence } from '../store.js';
+import { useStore, mutate, sortedClasses, holidayOn, weekLetter, occurrence, groupsOf, classById } from '../store.js';
 import { Modal, Field, Empty } from './common.js';
 import { toMin, uid, iso, fromISO, addDays, mondayOf, fmtDateShort, classColor, textOn } from '../util.js';
 import { Ico } from '../icons.js';
@@ -43,6 +43,8 @@ export const sessionChapters = chIds;
 
 /** Durée d'une séance en « heures de cours » : arrondie à la demi-heure (un créneau de 55 min compte 1 h). */
 const courseH = o => Math.max(0.5, Math.round((toMin(o.end) - toMin(o.start)) / 60 * 2) / 2);
+/** Poids d'une séance : en groupes (séance de demi-classe), les groupes font la même chose, donc chaque séance ne compte que pour 1/n de l'heure de cours. */
+const groupW = (d, classId, o) => { const n = o && o.group ? groupsOf(classById(d, classId)).length : 0; return n > 1 ? 1 / n : 1; };
 const R = 20;   // subdivisions verticales d'une semaine : un chapitre occupe la part de la semaine proportionnelle à ses heures de cours
 
 /** Chapitres réellement travaillés d'un niveau, d'après la classe la plus avancée : séances (date, chapitres, heures) et premier/dernier jour par chapitre. */
@@ -55,7 +57,7 @@ function taughtOf(d, lv) {
       const ids = chIds(x).filter(id => id in order); if (!ids.length || x.ds || x.ap) continue;
       const o = x.slotId ? occurrence(d, x.slotId, x.date) : null;
       if (o && o.cancelled) continue;
-      sessions.push({ date: x.date, ids, h: o ? courseH(o) : 1 });
+      sessions.push({ date: x.date, ids, h: o ? courseH(o) * groupW(d, c.id, o) : 1 });
       for (const id of ids) { const e = per[id] ||= { first: x.date, last: x.date }; if (x.date < e.first) e.first = x.date; if (x.date > e.last) e.last = x.date; }
     }
     const top = Math.max(-1, ...Object.keys(per).map(id => order[id]));
@@ -152,7 +154,7 @@ export function hoursOf(d, classId) {
   for (const x of Object.values(d.sessions)) {
     const ids = chIds(x); if (x.classId !== classId || !ids.length || !x.slotId || x.ds || x.ap) continue;
     const o = occurrence(d, x.slotId, x.date); if (!o || o.cancelled) continue;
-    const h = courseH(o);
+    const h = courseH(o) * groupW(d, classId, o);
     for (const id of ids) out[id] = (out[id] || 0) + h / ids.length;
   }
   return out;
