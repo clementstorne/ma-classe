@@ -73,11 +73,23 @@ export function defaultData() {
   };
 }
 
+/** Types de séance particuliers (hors cours ordinaire) : non comptés dans les heures de progression. */
+export const KINDS = { ds: 'DS', ap: 'AP', projet: 'Projet' };
+export const PROJET_COLOR = '#8b5cf6';
+/** Types proposés pour une classe (DS et AP par défaut). */
+export const kindsOf = cls => (cls && cls.kinds) || ['ds', 'ap'];
+/** Type d'une séance : celui choisi pour cette séance, sinon le type par défaut de la classe (ex. toutes les séances de 5e en AP), sinon null. */
+export function kindOf(d, se, classId) {
+  const c = classById(d, classId || (se && se.classId)), k = se && se.kind;
+  if (k === 'none') return null;
+  return k || (c && c.defKind) || null;
+}
 function migrate(d) {
   const base = defaultData();
   for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
   d.settings = { ...base.settings, ...d.settings };
   d.notes ||= [];
+  for (const x of Object.values(d.sessions || {})) { if (x.ds) x.kind = 'ds'; else if (x.ap) x.kind = 'ap'; delete x.ds; delete x.ap; }
   // parties du programme : nouvelle palette (si les couleurs d'origine n'ont pas été changées) et suppression d'« Algorithmique » si inutilisée
   const oldC = { 'p-nc': ['#2f6fed'], 'p-gm': ['#d9822b', '#0f9fa8'], 'p-eg': ['#2b9a5f', '#e8731a'], 'p-og': ['#8a4fd0'] };
   const newC = { 'p-nc': '#4b78b0', 'p-gm': '#5c9a5f', 'p-eg': '#d08a3e', 'p-og': '#bd5a7d' };

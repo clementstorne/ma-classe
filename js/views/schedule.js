@@ -1,5 +1,5 @@
 import { html, useState, useRef, useEffect } from '../../vendor/preact-htm.js';
-import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf, sortedClasses, holidayOn, roomsFor } from '../store.js';
+import { useStore, mutate, classById, roomById, sessionKey, etabOf, weekLetter, occurrence, groupsOf, sortedClasses, holidayOn, roomsFor, kindOf, KINDS, PROJET_COLOR } from '../store.js';
 import { mondayOf, addDays, iso, fromISO, toMin, fromMin, DAYS, uid, classColor, textOn, todayISO, fmtDateLong } from '../util.js';
 import { Modal, Field, Empty, toast } from './common.js';
 import { go } from '../router.js';
@@ -173,13 +173,14 @@ export function Schedule() {
           const se = d.sessions[sessionKey(o.classId, date, o.id)];
           const c = classById(d, o.classId), room = roomById(d, o.roomId);
           const nAbs = se ? Object.values(se.marks).filter(m => m === 'A').length : 0;
-          const bg = colorOf(o.classId);
+          const kind = !o.cancelled ? kindOf(d, se || { classId: o.classId }, o.classId) : null;
+          const bg = kind === 'projet' ? ((c && c.projetColor) || PROJET_COLOR) : colorOf(o.classId);
           const note = '';
           return html`<button class=${'slot' + (o.cancelled ? ' cancelled' : '')} key=${o.id} style=${{ background: bg, color: textOn(bg), top: (toMin(o.start) - gStart) * PPM + 'px', height: (toMin(o.end) - toMin(o.start)) * PPM - 2 + 'px' }}
             onClick=${e => { e.stopPropagation(); openOcc(o); }}>
             <b>${c ? c.name : '?'}${o.group ? html` <small>· ${o.group}</small>` : ''}${room ? html` <small>· ${room.name}</small>` : ''}${note ? html` <small class="note">· ${note}</small>` : ''}</b>
             <span>${o.start}–${o.end}</span>
-            ${se && (se.ds || se.ap) && !o.cancelled ? html`<span class="dsb">${se.ds ? 'DS' : 'AP'}</span>` : null}
+            ${kind ? html`<span class="dsb">${KINDS[kind]}</span>` : null}
             ${se && se.validated && !o.cancelled ? html`<span class="tag">✓${nAbs ? ' · ' + nAbs + ' abs.' : ''}</span>` : null}
           </button>`;
         })}

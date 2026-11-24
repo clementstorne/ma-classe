@@ -1,5 +1,5 @@
 import { html, useState } from '../../vendor/preact-htm.js';
-import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence } from '../store.js';
+import { useStore, mutate, sortedClasses, roomsFor, classById, studentsOf, groupsOf, etabOf, currentPeriod, getPlan, sessionKey, roomById, occurrence, KINDS, PROJET_COLOR, kindsOf } from '../store.js';
 import { planKey, parsePlanKey, groupStudents } from '../store.js';
 import { PlanThumb } from './salles.js';
 import { LEVELS, levelOf } from './progressions.js';
@@ -68,7 +68,7 @@ export function ClassFolder({ id, tab, q }) {
       for (const k of Object.keys(dd.sessions)) if (dd.sessions[k].classId === id) delete dd.sessions[k];
       for (const k of Object.keys(dd.plans)) if (k.startsWith(id + '|')) delete dd.plans[k];
     }); setEdit(null); go('/classes'); return; }
-    mutate(dd => Object.assign(dd.classes.find(c => c.id === id), { name: edit.name.trim() || cls.name, etabId: edit.etabId, color: edit.color, level: edit.level || '' }));
+    mutate(dd => Object.assign(dd.classes.find(c => c.id === id), { name: edit.name.trim() || cls.name, etabId: edit.etabId, color: edit.color, level: edit.level || '', kinds: edit.kinds, defKind: edit.defKind && edit.kinds.includes(edit.defKind) ? edit.defKind : '', projetColor: edit.projetColor }));
     setEdit(null);
   }
   function newStudent() {
@@ -80,7 +80,7 @@ export function ClassFolder({ id, tab, q }) {
   return html`<div class=${'page' + (tab === 'suivi' || tab === 'notes' ? ' fitcol' : '')}>
     <div class="page-head"><span class="dot" style=${{ background: classColor(cls) }}></span><h1>${cls.name}</h1>
       <span class="sub">${studs.length} élèves · ${etabOf(d, cls).name}</span><span class="grow"></span>
-      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls), level: cls.level || '' })}>${Ico('gear')} Paramètres</button></div>
+      <button class="btn small" onClick=${() => setEdit({ name: cls.name, etabId: cls.etabId, color: classColor(cls), level: cls.level || '', kinds: kindsOf(cls), defKind: cls.defKind || '', projetColor: cls.projetColor || PROJET_COLOR })}>${Ico('gear')} Paramètres</button></div>
     ${q.date ? html`<div class="banner"><div class="grow"><b>Séance du ${fmtDateLong(q.date)}</b>
         <div class="muted">${slot ? slot.start + '–' + slot.end : ''}${slot && slot.group ? ' · groupe ' + slot.group : ''}${room ? ' · ' + room.name : ''}${se && se.validated ? ' · appel fait ✓' : ''}</div></div>
       <button class="btn primary" onClick=${() => go(apLink(q.date, q.slot))}>${se && se.validated ? 'Revoir l\'appel' : 'Faire l\'appel' + (slot && slot.group ? ' · ' + slot.group : '')}</button>
@@ -103,7 +103,10 @@ export function ClassFolder({ id, tab, q }) {
       <${Field} label="Nom"><input value=${edit.name} onInput=${e => setEdit({ ...edit, name: e.target.value })} /><//>
       <${Field} label="Établissement"><select value=${edit.etabId} onChange=${e => setEdit({ ...edit, etabId: e.target.value })}>${d.etabs.map(e => html`<option value=${e.id}>${e.name}</option>`)}</select><//>
       <${Field} label="Niveau"><select value=${edit.level || ''} onChange=${e => setEdit({ ...edit, level: e.target.value })}><option value="">Automatique (d'après le nom)</option>${LEVELS.map(l => html`<option value=${l}>${l}</option>`)}</select><//>
-      <${Field} label="Couleur de la classe"><${ColorPicker} value=${edit.color} onChange=${c => setEdit({ ...edit, color: c })} /><//><//>` : null}
+      <${Field} label="Couleur de la classe"><${ColorPicker} value=${edit.color} onChange=${c => setEdit({ ...edit, color: c })} /><//>
+      <${Field} label="Types de séance"><div class="row" style="gap:8px">${Object.keys(KINDS).map(k => html`<button key=${k} class=${'btn' + (edit.kinds.includes(k) ? ' primary' : '')} onClick=${() => setEdit({ ...edit, kinds: edit.kinds.includes(k) ? edit.kinds.filter(x => x !== k) : Object.keys(KINDS).filter(x => x === k || edit.kinds.includes(x)) })}>${KINDS[k]}</button>`)}</div><//>
+      ${edit.kinds.length ? html`<${Field} label="Type par défaut des séances"><select value=${edit.kinds.includes(edit.defKind) ? edit.defKind : ''} onChange=${e => setEdit({ ...edit, defKind: e.target.value })}><option value="">Aucun (cours ordinaire)</option>${edit.kinds.map(k => html`<option value=${k}>${KINDS[k]}</option>`)}</select><//>` : null}
+      ${edit.kinds.includes('projet') ? html`<${Field} label="Couleur des séances Projet"><${ColorPicker} value=${edit.projetColor} onChange=${c => setEdit({ ...edit, projetColor: c })} /><//>` : null}<//>` : null}
   </div>`;
 }
 
