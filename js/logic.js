@@ -6,13 +6,14 @@ export const questionsOf = ev => ev.exercises.flatMap(ex => ex.questions.map(q =
 /** `student` (facultatif) : un élève avec aménagement voit sa note ramenée sur 20 et arrondie au quart de point. */
 export function studentStats(ev, sid, comps, student) {
   const sc = ev.scores[sid] || {};
-  let total = 0, max = 0, entered = 0;
+  let total = 0, max = 0, full = 0, entered = 0;
   const perEx = {};
   const compAcc = {};
   for (const ex of ev.exercises) {
     let t = 0, m = 0;
     for (const q of ex.questions) {
       const v = sc[q.id];
+      full += q.max;
       if (v === 'x') continue;
       m += q.max;
       if (typeof v === 'number') { t += v; entered++; }
@@ -35,10 +36,10 @@ export function studentStats(ev, sid, comps, student) {
   const adj = (ev.adjust && ev.adjust[sid]) || 0;
   const final = Math.max(0, total + adj);
   const absent = !!(ev.absent && ev.absent[sid]);
-  // La note reste en points (barème de l'évaluation). Seuls les élèves avec aménagement sont ramenés sur 20, au quart de point.
+  // La note reste en points (barème de l'évaluation). Seuls les élèves avec aménagement dont des questions ont été supprimées (marquées x, ce qui change le barème) sont ramenés sur 20, au quart de point.
   let note = null, noteMax = max;
   if (!absent && entered > 0 && max > 0) {
-    if (student && String(student.amenagement || '').trim()) { note = Math.round(final / max * 20 * 4) / 4; noteMax = 20; }
+    if (student && String(student.amenagement || '').trim() && max < full - 1e-9) { note = Math.round(final / max * 20 * 4) / 4; noteMax = 20; }
     else note = final;
   }
   return { total, adj, final, max, note, noteMax, absent, entered, perEx, levels };
