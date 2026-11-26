@@ -140,8 +140,11 @@ function Suivi({ cls, studs, onOpen, initial }) {
 
 function NotesList({ cls, studs }) {
   const d = useStore();
-  const evs = d.evals.filter(e => e.classId === cls.id).sort((a, b) => b.date.localeCompare(a.date));
   const etab = etabOf(d, cls);
+  const cur = currentPeriod(etab);
+  const [per, setPer] = useState(cur ? cur.id : 'all');
+  const range = per === 'all' ? null : (etab.periods || []).find(p => p.id === per) || null;
+  const evs = d.evals.filter(e => e.classId === cls.id && (!range || (e.date >= range.start && e.date <= range.end))).sort((a, b) => b.date.localeCompare(a.date));
   const [draft, setDraft] = useState(null);
   const lvl = levelOf(cls);
   const sources = !lvl ? [] : d.evals.filter(e => e.classId !== cls.id).filter(e => { const c = classById(d, e.classId); return c && levelOf(c) === lvl; })
@@ -176,14 +179,14 @@ function NotesList({ cls, studs }) {
   for (const p of pers) { const list = evs.filter(e => e.date >= p.start && e.date <= p.end); if (list.length) groups.push({ id: p.id, name: p.name, list }); }
   const other = evs.filter(e => !pers.some(p => e.date >= p.start && e.date <= p.end));
   if (other.length) groups.push({ id: 'autre', name: pers.length ? 'Hors période' : '', list: other });
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setDraft({ name: '', date: todayISO() })}>${Ico('plus')} Créer une évaluation</button></div>
+  return html`<div class="row" style="margin-bottom:12px"><${PeriodSelect} etab=${etab} value=${per} onChange=${setPer} /><span class="grow"></span><button class="btn primary" onClick=${() => setDraft({ name: '', date: todayISO() })}>${Ico('plus')} Créer une évaluation</button></div>
     ${draft ? html`<${Modal} title="Créer une évaluation" onClose=${() => setDraft(null)} foot=${html`<button class="btn" onClick=${() => setDraft(null)}>Annuler</button><button class="btn primary" disabled=${!draft.name.trim() || !draft.date} onClick=${create}>Créer</button>`}>
       <${Field} label="Nom"><input autofocus value=${draft.name} placeholder="Ex. : DS n°2" onInput=${e => setDraft({ ...draft, name: e.target.value })} /><//>
       <${Field} label="Date"><input type="date" value=${draft.date} onInput=${e => setDraft({ ...draft, date: e.target.value })} /><//>
       ${sources.length ? html`<${Field} label="Copier depuis une autre classe"><select value=${draft.from || ''} onChange=${e => { const ev = sources.find(x => x.id === e.target.value); setDraft({ ...draft, from: e.target.value, name: ev && !draft.name.trim() ? ev.name : draft.name }); }}>
         <option value="">Évaluation vierge</option>${sources.map(e => html`<option key=${e.id} value=${e.id}>${classById(d, e.classId).name} · ${e.name}</option>`)}</select><//>` : null}<//>` : null}
-    ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
-    : html`${groups.map(g => html`<section key=${g.id} style="margin-bottom:18px">${g.name ? html`<h3 class="pgrp">${g.name}<small>${g.list.length} évaluation${g.list.length > 1 ? 's' : ''}</small></h3>` : null}
+    ${!evs.length ? html`<${Empty} title=${per === 'all' ? 'Aucune évaluation' : 'Aucune évaluation sur cette période'}><//>`
+    : html`${groups.map(g => html`<section key=${g.id} style="margin-bottom:18px">${g.name && per === 'all' ? html`<h3 class="pgrp">${g.name}<small>${g.list.length} évaluation${g.list.length > 1 ? 's' : ''}</small></h3>` : null}
       <div class="eval-cards">${g.list.map(card)}</div></section>`)}`}`;
 }
 
