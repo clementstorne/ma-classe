@@ -156,19 +156,11 @@ function NotesList({ cls, studs }) {
   }
   const byId = Object.fromEntries(studs.map(s => [s.id, s]));
   const ids = studs.map(s => s.id), comps = d.settings.comps;
-  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setDraft({ name: '', date: todayISO() })}>${Ico('plus')} Créer une évaluation</button></div>
-    ${draft ? html`<${Modal} title="Créer une évaluation" onClose=${() => setDraft(null)} foot=${html`<button class="btn" onClick=${() => setDraft(null)}>Annuler</button><button class="btn primary" disabled=${!draft.name.trim() || !draft.date} onClick=${create}>Créer</button>`}>
-      <${Field} label="Nom"><input autofocus value=${draft.name} placeholder="Ex. : DS n°2" onInput=${e => setDraft({ ...draft, name: e.target.value })} /><//>
-      <${Field} label="Date"><input type="date" value=${draft.date} onInput=${e => setDraft({ ...draft, date: e.target.value })} /><//>
-      ${sources.length ? html`<${Field} label="Copier depuis une autre classe"><select value=${draft.from || ''} onChange=${e => { const ev = sources.find(x => x.id === e.target.value); setDraft({ ...draft, from: e.target.value, name: ev && !draft.name.trim() ? ev.name : draft.name }); }}>
-        <option value="">Évaluation vierge</option>${sources.map(e => html`<option key=${e.id} value=${e.id}>${classById(d, e.classId).name} · ${e.name}</option>`)}</select><//>` : null}<//>` : null}
-    ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
-    : html`<div class="eval-cards">${evs.map(ev => {
+  const card = ev => {
         const sm = evalSummary(ev, ids, comps, byId);
-        const per = (etab.periods || []).find(p => ev.date >= p.start && ev.date <= p.end);
         const used = comps.filter(c => ev.exercises.some(x => x.questions.some(q => (q.comps || []).includes(c))));
         return html`<div class="card eval-card" key=${ev.id} onClick=${() => go('/eval/' + ev.id)}>
-          <div class="eval-head"><b>${ev.name}</b><span class="muted small">${fmtDateShort(ev.date)}${per ? ' · ' + per.name : ''}</span></div>
+          <div class="eval-head"><b>${ev.name}</b><span class="muted small">${fmtDateShort(ev.date)}</span></div>
           ${sm.n ? html`<div class="eval-stats">
             <div class="es main"><span>Moyenne</span><b>${fmtNum(sm.avg)}</b><i>/ ${fmtNum(sm.barème)}</i></div>
             <div class="es"><span>Min</span><b>${fmtNum(sm.min)}</b></div>
@@ -177,7 +169,22 @@ function NotesList({ cls, studs }) {
           ${sm.n && used.length ? html`<div class="eval-comps">${used.map(c => { const a = sm.dist[c] || [0, 0, 0, 0], t = a.reduce((x, y) => x + y, 0) || 1;
             return html`<div class="ec" key=${c}><span>${c}</span><div class="ecbar" title=${a.map((n, i) => 'niveau ' + (i + 1) + ' : ' + n).join(' · ')}>${a.map((n, i) => n ? html`<i class=${'lv-' + (i + 1)} style=${{ width: n / t * 100 + '%' }}></i>` : null)}</div></div>`; })}</div>` : null}
         </div>`;
-      })}</div>`}`;
+  };
+  // regroupement par semestre / trimestre d'après la date (le plus récent en premier)
+  const pers = [...(etab.periods || [])].sort((x, y) => y.start.localeCompare(x.start));
+  const groups = [];
+  for (const p of pers) { const list = evs.filter(e => e.date >= p.start && e.date <= p.end); if (list.length) groups.push({ id: p.id, name: p.name, list }); }
+  const other = evs.filter(e => !pers.some(p => e.date >= p.start && e.date <= p.end));
+  if (other.length) groups.push({ id: 'autre', name: pers.length ? 'Hors période' : '', list: other });
+  return html`<div class="row" style="margin-bottom:12px"><button class="btn primary" onClick=${() => setDraft({ name: '', date: todayISO() })}>${Ico('plus')} Créer une évaluation</button></div>
+    ${draft ? html`<${Modal} title="Créer une évaluation" onClose=${() => setDraft(null)} foot=${html`<button class="btn" onClick=${() => setDraft(null)}>Annuler</button><button class="btn primary" disabled=${!draft.name.trim() || !draft.date} onClick=${create}>Créer</button>`}>
+      <${Field} label="Nom"><input autofocus value=${draft.name} placeholder="Ex. : DS n°2" onInput=${e => setDraft({ ...draft, name: e.target.value })} /><//>
+      <${Field} label="Date"><input type="date" value=${draft.date} onInput=${e => setDraft({ ...draft, date: e.target.value })} /><//>
+      ${sources.length ? html`<${Field} label="Copier depuis une autre classe"><select value=${draft.from || ''} onChange=${e => { const ev = sources.find(x => x.id === e.target.value); setDraft({ ...draft, from: e.target.value, name: ev && !draft.name.trim() ? ev.name : draft.name }); }}>
+        <option value="">Évaluation vierge</option>${sources.map(e => html`<option key=${e.id} value=${e.id}>${classById(d, e.classId).name} · ${e.name}</option>`)}</select><//>` : null}<//>` : null}
+    ${!evs.length ? html`<${Empty} title="Aucune évaluation"><//>`
+    : html`${groups.map(g => html`<section key=${g.id} style="margin-bottom:18px">${g.name ? html`<h3 class="pgrp">${g.name}<small>${g.list.length} évaluation${g.list.length > 1 ? 's' : ''}</small></h3>` : null}
+      <div class="eval-cards">${g.list.map(card)}</div></section>`)}`}`;
 }
 
 function PlansList({ cls }) {

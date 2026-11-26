@@ -403,3 +403,7 @@ table.notes thead tr:nth-child(2) th{top:var(--h1,58px)}
 .ecbar .lv-1{background:rgb(228,52,38)}.ecbar .lv-2{background:rgb(249,219,74)}.ecbar .lv-3{background:rgb(102,182,93)}.ecbar .lv-4{background:rgb(55,126,34)}
 
 .page.fitcol>.entry{position:static;flex:none;margin:10px -4px 0;border:1px solid var(--line);border-radius:14px;box-shadow:none}
+
+.pgrp{display:flex;align-items:baseline;gap:10px;font-size:15px;margin:4px 0 10px}
+.pgrp small{font-size:12.5px;color:var(--muted);font-weight:600}
+table.g.notes th.pstart,table.g.notes td.pstart{border-left:3px solid var(--line-strong,#b9c1d1)}
